@@ -11,7 +11,8 @@
       "Bash(git tag:*)",
       "Bash(git branch:*)",
       "Bash(git checkout:*)",
-      "Bash(gh pr create:*)"
+      "Bash(gh pr create:*)",
+      "Bash(git merge:*)"
     ],
     "additionalDirectories": [
       "/Users/benvanaken/Developer/SwiftlyUI-DemoApp"
