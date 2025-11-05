@@ -9,7 +9,7 @@ import SwiftUI
 /// - Keyboard navigation
 /// - Maximum tag limits
 /// - Cross-platform compatibility
-@available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 public struct TokenTagField: View {
     /// The current array of tags.
     @Binding var tags: [Tag]
@@ -89,49 +89,17 @@ public struct TokenTagField: View {
     /// The main input area containing tags and the text field.
     @ViewBuilder
     private var tagInputArea: some View {
-        if #available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *) {
-            FlowLayout(spacing: 6) {
-                tagChips
-                inputField
-            }
-            .padding(8)
-            .background(Color.textBackground)
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(Color.separator, lineWidth: 1)
-            )
-        } else {
-            // Fallback for older OS versions using a simple layout
-            VStack(alignment: .leading, spacing: 6) {
-                // Display tags in rows of 3
-                ForEach(Array(tags.chunked(into: 3)), id: \.self) { tagChunk in
-                    HStack(spacing: 6) {
-                        ForEach(tagChunk) { tag in
-                            TagChip(
-                                tag: tag,
-                                onRemove: { onRemove(tag) },
-                                onUpdate: handleTagUpdate
-                            )
-                        }
-                        Spacer()
-                    }
-                }
-
-                // Input field in its own row
-                HStack {
-                    inputField
-                    Spacer()
-                }
-            }
-            .padding(8)
-            .background(Color.textBackground)
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(Color.separator, lineWidth: 1)
-            )
+        FlowLayout(spacing: 6) {
+            tagChips
+            inputField
         }
+        .padding(8)
+        .background(Color.textBackground)
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Color.separator, lineWidth: 1)
+        )
     }
 
     /// The individual tag chips.
