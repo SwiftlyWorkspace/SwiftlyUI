@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(swift --version)",
+      "Bash(swift build:*)",
+      "Bash(swift test:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)"
+    ],
+    "additionalDirectories": [
+      "/Users/benvanaken/Developer/SwiftlyUI-DemoApp"
+    ]
+  }
+}
