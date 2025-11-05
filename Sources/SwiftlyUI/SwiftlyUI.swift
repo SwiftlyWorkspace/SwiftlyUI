@@ -27,6 +27,29 @@
 /// )
 /// ```
 ///
+/// ### User Token Field
+/// A search-based user selection component with avatar display and auto-completion.
+///
+/// ```swift
+/// @State private var selectedUsers: [SwiftlyUIUser] = []
+/// @State private var searchText = ""
+///
+/// UserTokenField(
+///     selectedUsers: $selectedUsers,
+///     searchText: $searchText,
+///     availableUsers: allUsers,
+///     onAdd: { user in selectedUsers.append(user) },
+///     onRemove: { user in selectedUsers.removeAll { $0.id == user.id } }
+/// )
+/// ```
+///
+/// Works with any type conforming to `UserRepresentable`:
+/// ```swift
+/// extension MyUser: UserRepresentable {
+///     // Conform to protocol requirements
+/// }
+/// ```
+///
 /// ### Layout Components
 /// - `FlowLayout`: A layout that arranges subviews in rows, wrapping to new lines as needed
 ///
