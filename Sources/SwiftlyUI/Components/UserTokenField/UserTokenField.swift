@@ -133,8 +133,8 @@ public struct UserTokenField<User: UserRepresentable>: View {
             let isNotSelected = !selectedUsers.contains(where: { $0.id == user.id })
 
             // Search in firstName, lastName, displayName, or email
-            let matchesSearch = user.firstName.lowercased().contains(searchLower) ||
-                               user.lastName.lowercased().contains(searchLower) ||
+            let matchesSearch = (user.firstName?.lowercased().contains(searchLower) ?? false) ||
+                               (user.lastName?.lowercased().contains(searchLower) ?? false) ||
                                user.displayName.lowercased().contains(searchLower) ||
                                user.email.lowercased().contains(searchLower)
 
@@ -147,8 +147,13 @@ public struct UserTokenField<User: UserRepresentable>: View {
     /// The main input area containing user chips and the search field.
     @ViewBuilder
     private var userInputArea: some View {
-        FlowLayout(spacing: 6) {
-            userChips
+        VStack(alignment: .leading, spacing: 8) {
+            if !selectedUsers.isEmpty {
+                FlowLayout(spacing: 6) {
+                    userChips
+                }
+            }
+
             searchField
         }
         .padding(8)

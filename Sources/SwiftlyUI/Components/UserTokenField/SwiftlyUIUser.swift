@@ -8,11 +8,17 @@ import SwiftUI
 ///
 /// ## Example
 /// ```swift
-/// let user = SwiftlyUIUser(
+/// // With full name
+/// let user1 = SwiftlyUIUser(
 ///     firstName: "John",
 ///     lastName: "Doe",
 ///     email: "john@example.com",
 ///     avatarImage: Image(systemName: "person.circle.fill")
+/// )
+///
+/// // With email only (names are optional)
+/// let user2 = SwiftlyUIUser(
+///     email: "jane@example.com"
 /// )
 /// ```
 ///
@@ -28,11 +34,11 @@ public struct SwiftlyUIUser: UserRepresentable {
     /// Unique identifier for the user
     public let id: UUID
 
-    /// The user's first name
-    public var firstName: String
+    /// The user's first name (optional)
+    public var firstName: String?
 
-    /// The user's last name
-    public var lastName: String
+    /// The user's last name (optional)
+    public var lastName: String?
 
     /// The user's email address
     public var email: String
@@ -49,15 +55,15 @@ public struct SwiftlyUIUser: UserRepresentable {
     ///
     /// - Parameters:
     ///   - id: Unique identifier (defaults to a new UUID)
-    ///   - firstName: The user's first name
-    ///   - lastName: The user's last name
+    ///   - firstName: The user's first name (optional)
+    ///   - lastName: The user's last name (optional)
     ///   - email: The user's email address
     ///   - avatarURL: Optional URL to the user's avatar image
     ///   - avatarImage: Optional SwiftUI Image for the user's avatar
     public init(
         id: UUID = UUID(),
-        firstName: String,
-        lastName: String,
+        firstName: String? = nil,
+        lastName: String? = nil,
         email: String,
         avatarURL: URL? = nil,
         avatarImage: Image? = nil

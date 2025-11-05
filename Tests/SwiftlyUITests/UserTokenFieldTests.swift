@@ -88,12 +88,13 @@ final class UserTokenFieldTests: XCTestCase {
 
     func testInitialsWithEmptyNames() {
         let user = SwiftlyUIUser(
-            firstName: "",
-            lastName: "",
+            firstName: nil,
+            lastName: nil,
             email: "anonymous@example.com"
         )
 
-        XCTAssertEqual(user.initials, "?")
+        // When names are nil, initials fall back to email initials
+        XCTAssertEqual(user.initials, "AN")
     }
 
     func testInitialsWithSingleCharacterNames() {
@@ -171,12 +172,13 @@ final class UserTokenFieldTests: XCTestCase {
 
     func testDisplayNameWithEmptyNames() {
         let user = SwiftlyUIUser(
-            firstName: "",
-            lastName: "",
+            firstName: nil,
+            lastName: nil,
             email: "anonymous@example.com"
         )
 
-        XCTAssertEqual(user.displayName, "")
+        // When names are nil, displayName falls back to email
+        XCTAssertEqual(user.displayName, "anonymous@example.com")
     }
 
     // MARK: - Equality Tests
@@ -297,8 +299,8 @@ final class UserTokenFieldTests: XCTestCase {
     func testCustomUserConformance() {
         struct CustomUser: UserRepresentable {
             let id: UUID
-            let firstName: String
-            let lastName: String
+            let firstName: String?
+            let lastName: String?
             let email: String
             var avatarURL: URL?
             var avatarImage: Image?
@@ -321,8 +323,8 @@ final class UserTokenFieldTests: XCTestCase {
     func testCustomUserWithMinimalProperties() {
         struct MinimalUser: UserRepresentable {
             let id: UUID
-            let firstName: String
-            let lastName: String
+            let firstName: String?
+            let lastName: String?
             let email: String
             var avatarURL: URL? { nil }
             var avatarImage: Image? { nil }
