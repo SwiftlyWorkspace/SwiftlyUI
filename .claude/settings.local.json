@@ -12,7 +12,9 @@
       "Bash(git branch:*)",
       "Bash(git checkout:*)",
       "Bash(gh pr create:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(git commit:*)",
+      "Bash(swift package:*)"
     ],
     "additionalDirectories": [
       "/Users/benvanaken/Developer/SwiftlyUI-DemoApp"
