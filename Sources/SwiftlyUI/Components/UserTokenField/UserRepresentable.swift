@@ -25,11 +25,11 @@ import SwiftUI
 /// - `avatarColor`: Consistent color based on user ID for avatar backgrounds
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 public protocol UserRepresentable: Identifiable, Sendable {
-    /// The user's first name
-    var firstName: String { get }
+    /// The user's first name (optional)
+    var firstName: String? { get }
 
-    /// The user's last name
-    var lastName: String { get }
+    /// The user's last name (optional)
+    var lastName: String? { get }
 
     /// The user's email address
     var email: String { get }
@@ -46,25 +46,42 @@ public extension UserRepresentable {
     /// The user's full name (firstName + lastName)
     ///
     /// Returns the combined first and last name with proper spacing.
+    /// If both names are nil, returns the email address.
     /// Trailing and leading whitespace is trimmed.
     var displayName: String {
-        "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
+        let first = firstName ?? ""
+        let last = lastName ?? ""
+        let fullName = "\(first) \(last)".trimmingCharacters(in: .whitespaces)
+        return fullName.isEmpty ? email : fullName
     }
 
     /// The user's initials (first letter of firstName + first letter of lastName)
     ///
     /// Returns a two-character string with the uppercased first letters of the
-    /// first and last names. Returns "?" if both names are empty.
+    /// first and last names. Falls back to email initials if names are not provided.
     ///
     /// ## Examples
     /// - "John Doe" → "JD"
     /// - "Jane Smith" → "JS"
+    /// - nil, nil (email: "john@example.com") → "JO" (from email)
     /// - "" → "?"
     var initials: String {
-        let first = firstName.first?.uppercased() ?? ""
-        let last = lastName.first?.uppercased() ?? ""
+        let first = firstName?.first?.uppercased() ?? ""
+        let last = lastName?.first?.uppercased() ?? ""
         let combined = first + last
-        return combined.isEmpty ? "?" : combined
+
+        if !combined.isEmpty {
+            return combined
+        }
+
+        // Fallback to email initials
+        let emailParts = email.components(separatedBy: "@")
+        if let username = emailParts.first, !username.isEmpty {
+            let firstTwo = String(username.prefix(2)).uppercased()
+            return firstTwo.count >= 2 ? firstTwo : firstTwo + "?"
+        }
+
+        return "?"
     }
 
     /// Generates a consistent color for the user based on their ID
