@@ -116,6 +116,10 @@ public struct TagChip: View {
                         Circle()
                             .fill(color)
                             .frame(width: 12, height: 12)
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(Color.primary.opacity(0.2), lineWidth: 1)
+                            )
                         Text(Tag.colorName(for: color))
                         if color == tag.color {
                             Image(systemName: "checkmark")
