@@ -121,6 +121,7 @@ public struct TagChip: View {
                                     .strokeBorder(Color.primary.opacity(0.2), lineWidth: 1)
                             )
                         Text(Tag.colorName(for: color))
+                            .foregroundStyle(color)
                         if color == tag.color {
                             Image(systemName: "checkmark")
                         }
