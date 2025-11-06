@@ -31,6 +31,11 @@ swift build
   - `TokenTagField.swift` - Main component with auto-completion, inline editing, and keyboard navigation
   - `Tag.swift` - Tag data model (Identifiable, Hashable, Sendable) with predefined colors and helper methods
   - `TagChip.swift` - Individual tag view with edit/remove capabilities
+- **`Components/UserTokenField/`** - User selection component
+  - `UserTokenField.swift` - Search-based user selection with avatar display and auto-completion
+  - `SwiftlyUIUser.swift` - Concrete user implementation for convenience (with optional firstName/lastName)
+  - `UserRepresentable.swift` - Protocol for custom user types with computed displayName, initials, and avatarColor
+  - `UserChip.swift` - Individual user chip with avatar (Image/URL/initials fallback) and remove button
 - **`Components/Layout/`** - Layout components
   - `FlowLayout.swift` - Flexible flow layout container that wraps views into rows
 - **`Extensions/`** - SwiftUI extensions
@@ -57,7 +62,9 @@ This is a Swift Package Manager library following standard SPM conventions. Key 
 - **Public API Entry Point**: The main `SwiftlyUI.swift` file serves as the public API entry point and includes comprehensive documentation for all components
 - **Platform Compatibility**: Cross-platform support is achieved through conditional compilation (`#if canImport(UIKit)` / `#if canImport(AppKit)`) in extensions
 - **Progressive Enhancement**: Components use `@available` attributes to provide newer features on supported platforms while maintaining backward compatibility
-- **Data Models**: Models like `Tag` conform to `Identifiable`, `Hashable`, and `Sendable` for proper SwiftUI integration and concurrency support
+- **Data Models**: Models like `Tag` and `SwiftlyUIUser` conform to `Identifiable`, `Hashable`, and `Sendable` for proper SwiftUI integration and concurrency support
+- **Protocol-Oriented Design**: Components like `UserTokenField` use protocols (e.g., `UserRepresentable`) to work with custom types, providing flexibility while maintaining type safety
+- **Avatar Handling**: User components support three avatar modes with automatic fallback: SwiftUI Image → URL-based async loading → colored initials
 - **Testing Structure**: Unit tests in `Tests/SwiftlyUITests/` focus on data models and logic; view components are tested via manual testing in the demo app
 
 ## Component Development Guidelines

@@ -136,6 +136,88 @@ public struct Tag: Identifiable, Hashable, Sendable {
 }
 ```
 
+## ☑️ Multi-Picker System
+
+The `MultiPicker` system provides comprehensive multi-selection capabilities with three specialized variants:
+
+### Key Features
+
+- 🎨 **Multiple Presentation Styles** - Inline, navigation, sheet, and menu styles
+- 🔍 **Search & Filter** - Built-in search for large datasets
+- 📁 **Section Support** - Organize items into collapsible categories
+- ⚖️ **Selection Limits** - Set minimum and maximum constraints
+- ⚡ **Bulk Actions** - Select All and Clear All operations
+- 🎯 **Type-Safe** - Works with any Hashable type (Int, String, UUID, custom)
+- 📱 **Cross-Platform** - iOS, macOS, tvOS, and watchOS support
+
+### Basic MultiPicker
+
+```swift
+@State private var selection: Set<Int> = []
+
+MultiPicker(
+    title: "Choose Options",
+    items: [
+        (value: 1, label: "Option 1"),
+        (value: 2, label: "Option 2"),
+        (value: 3, label: "Option 3")
+    ],
+    selection: $selection,
+    minSelections: 1,
+    maxSelections: 3
+)
+.multiPickerStyle(.inline)
+```
+
+### SearchableMultiPicker
+
+For large lists with search functionality:
+
+```swift
+@State private var selection: Set<String> = []
+@State private var searchText = ""
+
+SearchableMultiPicker(
+    title: "Select Countries",
+    items: countries.map { (value: $0.id, label: $0.name) },
+    selection: $selection,
+    searchText: $searchText,
+    showSelectAll: true,
+    showClearAll: true
+)
+```
+
+### GroupedMultiPicker
+
+For categorized/sectioned data:
+
+```swift
+@State private var selection: Set<String> = []
+
+GroupedMultiPicker(
+    title: "Select Foods",
+    sections: [
+        (header: "Fruits", items: [
+            (value: "apple", label: "Apple"),
+            (value: "banana", label: "Banana")
+        ]),
+        (header: "Vegetables", items: [
+            (value: "carrot", label: "Carrot"),
+            (value: "broccoli", label: "Broccoli")
+        ])
+    ],
+    selection: $selection,
+    collapsibleSections: true
+)
+```
+
+### Available Styles
+
+- `.inline` - Items displayed directly in the view
+- `.navigationLink` - Navigate to a new screen
+- `.sheet` - Present in a modal sheet
+- `.menu` - Dropdown menu (ideal for macOS)
+
 ## 🧩 Components
 
 ### Current Components
@@ -143,6 +225,10 @@ public struct Tag: Identifiable, Hashable, Sendable {
 | Component | Description | Status |
 |-----------|-------------|--------|
 | **TokenTagField** | Advanced tag input with auto-completion | ✅ Available |
+| **UserTokenField** | User selection with search and avatars | ✅ Available |
+| **MultiPicker** | Multi-selection picker with multiple styles | ✅ Available |
+| **SearchableMultiPicker** | Multi-picker with search/filter | ✅ Available |
+| **GroupedMultiPicker** | Multi-picker with sections/categories | ✅ Available |
 | **FlowLayout** | Responsive layout that wraps content | ✅ Available |
 
 ### Upcoming Components
