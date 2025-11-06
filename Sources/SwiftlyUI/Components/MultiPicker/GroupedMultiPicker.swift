@@ -96,10 +96,29 @@ public struct GroupedMultiPicker<SelectionValue: Hashable>: View {
     // MARK: - Body
 
     public var body: some View {
+        let selectedLabels = allItems
+            .filter { selection.contains($0.value) }
+            .map { $0.label }
+            .sorted()
+
+        let labelView = HStack(spacing: 8) {
+            AdaptiveTokenLayout(
+                items: selectedLabels,
+                placeholder: title
+            )
+
+            if selection.count > 0 {
+                Text("(\(selection.count))")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+
         let configuration = MultiPickerStyleConfiguration(
-            label: AnyView(Text(title)),
+            label: AnyView(labelView),
             content: AnyView(pickerContent),
             selectionCount: selection.count,
+            selectedItems: selectedLabels,
             requiresConfirmation: requiresConfirmation
         )
 
@@ -280,7 +299,7 @@ public struct GroupedMultiPicker<SelectionValue: Hashable>: View {
         .background(Color.controlBackground.opacity(0.3))
     }
 
-    /// Confirmation buttons bar (Done/Cancel).
+    /// Confirmation buttons bar (Apply/Cancel).
     @ViewBuilder
     private var confirmationBar: some View {
         HStack {
@@ -291,7 +310,7 @@ public struct GroupedMultiPicker<SelectionValue: Hashable>: View {
 
             Spacer()
 
-            Button("Done") {
+            Button("Apply") {
                 // Commit selection
             }
             .buttonStyle(.borderedProminent)
@@ -400,6 +419,7 @@ public typealias SectionedMultiPicker = GroupedMultiPicker
                 )
                 .navigationTitle("Demo")
             }
+            .padding()
         }
     }
 
