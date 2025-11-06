@@ -114,29 +114,124 @@ public struct SearchableMultiPicker<SelectionValue: Hashable>: View {
     // MARK: - Body
 
     public var body: some View {
+        let configuration = MultiPickerStyleConfiguration(
+            label: AnyView(Text(title)),
+            content: AnyView(pickerContent),
+            selectionCount: selection.count,
+            requiresConfirmation: requiresConfirmation
+        )
+
+        return style.makeBody(configuration: configuration)
+    }
+
+    /// The complete picker content including search field and items.
+    private var pickerContent: some View {
         VStack(spacing: 0) {
-            // Search field
+            // Search field at the top of the picker content
             searchField
 
             Divider()
 
-            // Picker content with filtered items
-            MultiPicker(
-                title: title,
-                items: filteredItems,
-                selection: $selection,
-                minSelections: minSelections,
-                maxSelections: maxSelections,
-                showSelectAll: showSelectAll,
-                showClearAll: showClearAll,
-                requiresConfirmation: requiresConfirmation
-            )
+            // Filtered items list
+            itemsList
 
             // Empty state for no results
             if filteredItems.isEmpty && !searchText.isEmpty {
                 emptyState
             }
         }
+    }
+
+    /// The scrollable list of items.
+    private var itemsList: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                // Bulk action buttons
+                if showSelectAll || showClearAll {
+                    bulkActionsBar
+                    Divider()
+                }
+
+                // Items
+                ForEach(Array(filteredItems.enumerated()), id: \.element.value) { _, item in
+                    MultiPickerRow(
+                        isSelected: selection.contains(item.value),
+                        isDisabled: isItemDisabled(item.value),
+                        action: { toggleSelection(item.value) }
+                    ) {
+                        Text(item.label)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Bulk actions bar (Select All / Clear All).
+    @ViewBuilder
+    private var bulkActionsBar: some View {
+        HStack(spacing: 16) {
+            if showSelectAll {
+                Button("Select All") {
+                    let availableValues = filteredItems.prefix(
+                        maxSelections.map { $0 - selection.count } ?? filteredItems.count
+                    ).map(\.value)
+                    selection.formUnion(availableValues)
+                }
+                .disabled(!canSelectAll)
+                .buttonStyle(.plain)
+                .font(.subheadline)
+                .foregroundStyle(canSelectAll ? .blue : .secondary)
+            }
+
+            if showClearAll {
+                Button("Clear All") {
+                    selection.removeAll()
+                }
+                .disabled(selection.isEmpty)
+                .buttonStyle(.plain)
+                .font(.subheadline)
+                .foregroundStyle(!selection.isEmpty ? .blue : .secondary)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    // MARK: - Helper Methods
+
+    /// Whether an item is disabled due to max selection limit.
+    private func isItemDisabled(_ value: SelectionValue) -> Bool {
+        if selection.contains(value) { return false }
+        if let max = maxSelections, selection.count >= max { return true }
+        return false
+    }
+
+    /// Toggles selection for an item.
+    private func toggleSelection(_ value: SelectionValue) {
+        if selection.contains(value) {
+            // Only allow deselection if it doesn't violate min constraint
+            if selection.count > minSelections {
+                selection.remove(value)
+            }
+        } else {
+            // Only allow selection if it doesn't violate max constraint
+            if let max = maxSelections, selection.count >= max {
+                return
+            }
+            selection.insert(value)
+        }
+    }
+
+    /// Whether "Select All" button should be enabled.
+    private var canSelectAll: Bool {
+        let itemsToSelect = filteredItems.filter { !selection.contains($0.value) }
+        if itemsToSelect.isEmpty { return false }
+        if let max = maxSelections {
+            return selection.count < max
+        }
+        return true
     }
 
     // MARK: - Private Computed Properties
