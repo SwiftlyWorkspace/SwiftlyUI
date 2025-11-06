@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ CRITICAL RULES - READ FIRST
+
+**NEVER KILL XCODE**: Do NOT use `killall Xcode` or any command that terminates Xcode. This is extremely disruptive to the developer's workflow. If Xcode needs to reload something, ask the user to do it manually or suggest they restart Xcode themselves. This rule is non-negotiable.
+
 ## Project Overview
 
 SwiftlyUI is a Swift Package Manager library providing reusable SwiftUI components for iOS, macOS, tvOS, and watchOS. The project has a companion demo app in `/Users/benvanaken/Developer/SwiftlyUI-DemoApp` that demonstrates usage of the library.
@@ -36,8 +40,15 @@ swift build
   - `SwiftlyUIUser.swift` - Concrete user implementation for convenience (with optional firstName/lastName)
   - `UserRepresentable.swift` - Protocol for custom user types with computed displayName, initials, and avatarColor
   - `UserChip.swift` - Individual user chip with avatar (Image/URL/initials fallback) and remove button
+- **`Components/MultiPicker/`** - Multi-selection picker system (iOS 16.0+ / macOS 13.0+)
+  - `MultiPicker.swift` - Base multi-selection picker component with tuple-based API
+  - `SearchableMultiPicker.swift` - Multi-picker with built-in search/filter functionality
+  - `GroupedMultiPicker.swift` - Multi-picker with section/category support
+  - `MultiPickerStyle.swift` - Style protocol and built-in styles (inline, navigationLink, sheet, menu)
+  - `Internal/` - Internal supporting views (checkbox, row, NSMenuPresenter for macOS native menus)
 - **`Components/Layout/`** - Layout components
   - `FlowLayout.swift` - Flexible flow layout container that wraps views into rows
+  - `AdaptiveTokenLayout.swift` - Token/chip layout with overflow indicator (used in MultiPicker labels)
 - **`Extensions/`** - SwiftUI extensions
   - `Color+Extensions.swift` - Cross-platform color utilities (controlBackground, textBackground, separator, adaptive light/dark mode colors)
 
@@ -52,7 +63,9 @@ swift build
 
 - **Package Minimum**: iOS 16.0+ / macOS 13.0+ / tvOS 16.0+ / watchOS 9.0+ (as defined in Package.swift)
 - **Swift**: 5.7+
-- **Note**: Individual components may use `@available` attributes to require higher OS versions for advanced features
+- **Note**: Individual components may use `@available` attributes for specific OS versions:
+  - MultiPicker system requires iOS 16.0+ / macOS 13.0+ / tvOS 16.0+ / watchOS 9.0+
+  - TokenTagField and UserTokenField work on iOS 15.0+ / macOS 12.0+ / tvOS 15.0+ / watchOS 8.0+
 
 ## Architecture Notes
 
@@ -65,6 +78,8 @@ This is a Swift Package Manager library following standard SPM conventions. Key 
 - **Data Models**: Models like `Tag` and `SwiftlyUIUser` conform to `Identifiable`, `Hashable`, and `Sendable` for proper SwiftUI integration and concurrency support
 - **Protocol-Oriented Design**: Components like `UserTokenField` use protocols (e.g., `UserRepresentable`) to work with custom types, providing flexibility while maintaining type safety
 - **Avatar Handling**: User components support three avatar modes with automatic fallback: SwiftUI Image → URL-based async loading → colored initials
+- **MultiPicker Style System**: Uses a protocol-based style system similar to SwiftUI's native pickers, with four built-in styles (inline, navigationLink, sheet, menu) and platform-specific defaults (menu on macOS, inline elsewhere)
+- **Type-Safe Multi-Selection**: MultiPicker system works with any Hashable type (Int, String, UUID, custom types) using Set<SelectionValue> for selections
 - **Testing Structure**: Unit tests in `Tests/SwiftlyUITests/` focus on data models and logic; view components are tested via manual testing in the demo app
 
 ## Component Development Guidelines

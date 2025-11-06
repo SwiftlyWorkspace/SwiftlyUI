@@ -31,6 +31,9 @@ public struct MultiPickerStyleConfiguration {
     /// The current selection count.
     public let selectionCount: Int
 
+    /// The selected item labels.
+    public let selectedItems: [String]
+
     /// Whether the picker is in a confirmed mode.
     public let requiresConfirmation: Bool
 }
@@ -73,9 +76,12 @@ public struct NavigationLinkMultiPickerStyle: MultiPickerStyle {
                 Spacer()
 
                 if configuration.selectionCount > 0 {
-                    Text("\(configuration.selectionCount) selected")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    let displayConfig = MultiPickerSelectionDisplayConfiguration(
+                        selectedItems: configuration.selectedItems,
+                        selectionCount: configuration.selectionCount
+                    )
+                    AbbreviatedSelectionDisplay(maxItems: 2)
+                        .makeBody(configuration: displayConfig)
                 }
 
                 Image(systemName: "chevron.right")
@@ -113,9 +119,12 @@ private struct SheetMultiPickerStyleView: View {
                 Spacer()
 
                 if configuration.selectionCount > 0 {
-                    Text("\(configuration.selectionCount) selected")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    let displayConfig = MultiPickerSelectionDisplayConfiguration(
+                        selectedItems: configuration.selectedItems,
+                        selectionCount: configuration.selectionCount
+                    )
+                    AbbreviatedSelectionDisplay(maxItems: 2)
+                        .makeBody(configuration: displayConfig)
                 }
             }
             .contentShape(Rectangle())
@@ -146,21 +155,63 @@ public struct MenuMultiPickerStyle: MultiPickerStyle {
     public init() {}
 
     public func makeBody(configuration: Configuration) -> some View {
-        Menu {
-            configuration.content
+        MenuMultiPickerStyleView(configuration: configuration)
+    }
+}
+
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+private struct MenuMultiPickerStyleView: View {
+    let configuration: MultiPickerStyleConfiguration
+    @State private var isPresented = false
+
+    var body: some View {
+        Button {
+            isPresented = true
         } label: {
-            HStack {
+            HStack(spacing: 8) {
                 configuration.label
 
-                if configuration.selectionCount > 0 {
-                    Text("(\(configuration.selectionCount))")
-                        .foregroundStyle(.secondary)
-                }
+                Spacer()
 
-                Image(systemName: "chevron.down")
-                    .font(.caption)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
             }
+            .contentShape(Rectangle())
+            .padding(.vertical, 4)
+            .padding(.horizontal, 8)
+        }
+        .buttonStyle(.plain)
+        .background(Color.primary.opacity(0.05))
+        .cornerRadius(6)
+        .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+            VStack(spacing: 0) {
+                configuration.content
+                    .frame(minWidth: 350, idealWidth: 400, maxWidth: 500, minHeight: 200, idealHeight: 350, maxHeight: 450)
+
+                if configuration.requiresConfirmation {
+                    Divider()
+
+                    HStack {
+                        Spacer()
+                        Button("Done") {
+                            isPresented = false
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .padding(12)
+                    }
+                    #if os(macOS)
+                    .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+                    #else
+                    .background(Color(uiColor: .systemBackground).opacity(0.5))
+                    #endif
+                }
+            }
+            #if os(macOS)
+            .background(Color(nsColor: .controlBackgroundColor))
+            #else
+            .background(Color(uiColor: .systemBackground))
+            #endif
         }
     }
 }

@@ -3,14 +3,16 @@
 A collection of reusable SwiftUI components designed for modern iOS, macOS, tvOS, and watchOS applications.
 
 [![Swift](https://img.shields.io/badge/Swift-5.7+-orange.svg)](https://swift.org)
-[![Platform](https://img.shields.io/badge/Platform-iOS%2015%2B%20%7C%20macOS%2012%2B%20%7C%20tvOS%2015%2B%20%7C%20watchOS%208%2B-lightgrey.svg)](https://developer.apple.com)
+[![Platform](https://img.shields.io/badge/Platform-iOS%2016%2B%20%7C%20macOS%2013%2B%20%7C%20tvOS%2016%2B%20%7C%20watchOS%209%2B-lightgrey.svg)](https://developer.apple.com)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## ✨ Features
 
 SwiftlyUI provides a comprehensive set of customizable components that integrate seamlessly with your SwiftUI applications:
 
-- **🏷️ Token Tag Field** - A powerful tag input component with auto-completion and inline editing
+- **🎯 Multi-Selection Pickers** - Flexible pickers with search, sections, and multiple presentation styles
+- **🏷️ Token & Tag Fields** - Powerful tag input with auto-completion and user selection with avatars
+- **📐 Layout Components** - Adaptive flow layouts and token displays with overflow handling
 - **📱 Cross-Platform** - Works on iOS, macOS, tvOS, and watchOS
 - **🎨 Customizable** - Extensive styling and theming options
 - **♿ Accessible** - Built with accessibility in mind
@@ -41,203 +43,146 @@ import SwiftUI
 import SwiftlyUI
 
 struct ContentView: View {
-    @State private var tags: [Tag] = []
-    @State private var inputText = ""
-
-    let suggestedTags: [Tag] = [
-        Tag(name: "Swift", color: .orange),
-        Tag(name: "SwiftUI", color: .blue),
-        Tag(name: "iOS", color: .green)
-    ]
+    @State private var selection: Set<String> = []
 
     var body: some View {
-        VStack {
-            Text("My Tags")
-                .font(.title)
-
-            TokenTagField(
-                tags: $tags,
-                inputText: $inputText,
-                suggestedTags: suggestedTags,
-                onAdd: { newTag in
-                    tags.append(newTag)
-                },
-                onRemove: { tagToRemove in
-                    tags.removeAll { $0.id == tagToRemove.id }
-                },
-                onUpdate: { updatedTag in
-                    if let index = tags.firstIndex(where: { $0.id == updatedTag.id }) {
-                        tags[index] = updatedTag
-                    }
-                }
-            )
+        Form {
+            MultiPicker("Choose Options", selection: $selection) {
+                Text("Option 1").multiPickerTag("opt1")
+                Text("Option 2").multiPickerTag("opt2")
+                Text("Option 3").multiPickerTag("opt3")
+            }
+            .multiPickerStyle(.menu)
         }
-        .padding()
     }
 }
 ```
-
-## 🏷️ Token Tag Field
-
-The `TokenTagField` is a sophisticated tag input component that provides:
-
-### Key Features
-
-- ✅ **Tag Creation**: Add new tags by typing and pressing Enter
-- ✏️ **Inline Editing**: Double-tap any tag to edit its name
-- 🎨 **Color Customization**: Choose from 10 predefined colors or set custom colors
-- 💡 **Auto-completion**: Smart suggestions based on your input
-- ⌨️ **Keyboard Navigation**: Full keyboard support including backspace to delete
-- 📏 **Customizable Limits**: Set maximum number of tags and custom styling
-- 🔄 **Real-time Updates**: Immediate visual feedback for all interactions
-
-### Advanced Usage
-
-```swift
-TokenTagField(
-    tags: $tags,
-    inputText: $inputText,
-    suggestedTags: suggestedTags,
-    maxTags: 5,
-    placeholder: "Enter skills...",
-    onAdd: { newTag in
-        // Custom add logic
-        tags.append(newTag)
-        analytics.track("tag_added", tag: newTag.name)
-    },
-    onRemove: { tagToRemove in
-        // Custom remove logic
-        tags.removeAll { $0.id == tagToRemove.id }
-        analytics.track("tag_removed", tag: tagToRemove.name)
-    },
-    onUpdate: { updatedTag in
-        // Custom update logic
-        if let index = tags.firstIndex(where: { $0.id == updatedTag.id }) {
-            tags[index] = updatedTag
-            analytics.track("tag_updated", from: tags[index].name, to: updatedTag.name)
-        }
-    }
-)
-```
-
-### Tag Model
-
-```swift
-public struct Tag: Identifiable, Hashable, Sendable {
-    public let id: UUID
-    public var name: String
-    public var color: Color
-
-    public init(id: UUID = UUID(), name: String, color: Color) {
-        self.id = id
-        self.name = name
-        self.color = color
-    }
-}
-```
-
-## ☑️ Multi-Picker System
-
-The `MultiPicker` system provides comprehensive multi-selection capabilities with three specialized variants:
-
-### Key Features
-
-- 🎨 **Multiple Presentation Styles** - Inline, navigation, sheet, and menu styles
-- 🔍 **Search & Filter** - Built-in search for large datasets
-- 📁 **Section Support** - Organize items into collapsible categories
-- ⚖️ **Selection Limits** - Set minimum and maximum constraints
-- ⚡ **Bulk Actions** - Select All and Clear All operations
-- 🎯 **Type-Safe** - Works with any Hashable type (Int, String, UUID, custom)
-- 📱 **Cross-Platform** - iOS, macOS, tvOS, and watchOS support
-
-### Basic MultiPicker
-
-```swift
-@State private var selection: Set<Int> = []
-
-MultiPicker(
-    title: "Choose Options",
-    items: [
-        (value: 1, label: "Option 1"),
-        (value: 2, label: "Option 2"),
-        (value: 3, label: "Option 3")
-    ],
-    selection: $selection,
-    minSelections: 1,
-    maxSelections: 3
-)
-.multiPickerStyle(.inline)
-```
-
-### SearchableMultiPicker
-
-For large lists with search functionality:
-
-```swift
-@State private var selection: Set<String> = []
-@State private var searchText = ""
-
-SearchableMultiPicker(
-    title: "Select Countries",
-    items: countries.map { (value: $0.id, label: $0.name) },
-    selection: $selection,
-    searchText: $searchText,
-    showSelectAll: true,
-    showClearAll: true
-)
-```
-
-### GroupedMultiPicker
-
-For categorized/sectioned data:
-
-```swift
-@State private var selection: Set<String> = []
-
-GroupedMultiPicker(
-    title: "Select Foods",
-    sections: [
-        (header: "Fruits", items: [
-            (value: "apple", label: "Apple"),
-            (value: "banana", label: "Banana")
-        ]),
-        (header: "Vegetables", items: [
-            (value: "carrot", label: "Carrot"),
-            (value: "broccoli", label: "Broccoli")
-        ])
-    ],
-    selection: $selection,
-    collapsibleSections: true
-)
-```
-
-### Available Styles
-
-- `.inline` - Items displayed directly in the view
-- `.navigationLink` - Navigate to a new screen
-- `.sheet` - Present in a modal sheet
-- `.menu` - Dropdown menu (ideal for macOS)
 
 ## 🧩 Components
 
-### Current Components
+### Multi-Selection Pickers
 
-| Component | Description | Status |
-|-----------|-------------|--------|
-| **TokenTagField** | Advanced tag input with auto-completion | ✅ Available |
-| **UserTokenField** | User selection with search and avatars | ✅ Available |
-| **MultiPicker** | Multi-selection picker with multiple styles | ✅ Available |
-| **SearchableMultiPicker** | Multi-picker with search/filter | ✅ Available |
-| **GroupedMultiPicker** | Multi-picker with sections/categories | ✅ Available |
-| **FlowLayout** | Responsive layout that wraps content | ✅ Available |
+Comprehensive multi-selection system with three specialized variants:
 
-### Upcoming Components
+| Component | Best For | Documentation |
+|-----------|----------|---------------|
+| **MultiPicker** | General multi-selection with optional sections | [📖 Docs](docs/MultiPicker.md) |
+| **SearchableMultiPicker** | Large lists requiring search/filter | [📖 Docs](docs/SearchableMultiPicker.md) |
+| **GroupedMultiPicker** | Advanced sectioning with collapsible groups | [📖 Docs](docs/GroupedMultiPicker.md) |
 
-| Component | Description | Status |
-|-----------|-------------|--------|
-| **Rating Control** | Customizable star rating input | 🚧 Planned |
-| **Progress Ring** | Animated circular progress indicator | 🚧 Planned |
-| **Segmented Picker** | Enhanced segmented control | 🚧 Planned |
+**Quick Example:**
+```swift
+@State private var selection: Set<String> = []
+
+MultiPicker("Select Items", selection: $selection) {
+    ForEach(items, id: \.self) { item in
+        Text(item).multiPickerTag(item)
+    }
+}
+.multiPickerStyle(.sheet)
+```
+
+**Features:**
+- 🎨 Multiple styles: inline, navigation, sheet, menu
+- 🔍 Built-in search and filtering
+- 📁 Section support with headers
+- ⚖️ Selection limits (min/max)
+- ⚡ Bulk actions (Select All, Clear All)
+- 🎯 Type-safe with any Hashable type
+- 🪙 Token display with overflow indicators
+
+### Token & Tag Fields
+
+Sophisticated input components for tags and user selection:
+
+| Component | Description | Documentation |
+|-----------|-------------|---------------|
+| **TokenTagField** | Advanced tag input with auto-completion and inline editing | [📖 Docs](docs/TokenTagField.md) |
+| **UserTokenField** | User selection with search, avatars, and multi-mode support | [📖 Docs](docs/UserTokenField.md) |
+
+**Quick Example:**
+```swift
+@State private var tags: [Tag] = []
+@State private var inputText = ""
+
+TokenTagField(
+    tags: $tags,
+    inputText: $inputText,
+    suggestedTags: suggestions,
+    onAdd: { tags.append($0) },
+    onRemove: { tags.removeAll { $0.id == $1.id } },
+    onUpdate: { tag in
+        if let index = tags.firstIndex(where: { $0.id == tag.id }) {
+            tags[index] = tag
+        }
+    }
+)
+```
+
+**Features:**
+- ✅ Tag creation and management
+- ✏️ Inline editing (double-tap)
+- 🎨 Color customization
+- 💡 Smart auto-completion
+- ⌨️ Full keyboard support
+- 👤 Avatar support (Image, URL, initials)
+
+### Layout Components
+
+Flexible layout utilities for responsive UIs:
+
+| Component | Description | Documentation |
+|-----------|-------------|---------------|
+| **FlowLayout** | Wraps content into rows like CSS flexbox | [📖 Docs](docs/Layout.md#flowlayout) |
+| **AdaptiveTokenLayout** | Displays tokens with "+X" overflow indicator | [📖 Docs](docs/Layout.md#adaptivetokenlayout) |
+
+**Quick Example:**
+```swift
+FlowLayout(spacing: 8) {
+    ForEach(items) { item in
+        ChipView(text: item)
+    }
+}
+```
+
+## 📖 Documentation
+
+### Component Documentation
+
+- **[MultiPicker](docs/MultiPicker.md)** - General multi-selection picker with ViewBuilder API
+- **[SearchableMultiPicker](docs/SearchableMultiPicker.md)** - Multi-picker with built-in search
+- **[GroupedMultiPicker](docs/GroupedMultiPicker.md)** - Advanced sectioning with collapsible groups
+- **[TokenTagField](docs/TokenTagField.md)** - Tag input with auto-completion
+- **[UserTokenField](docs/UserTokenField.md)** - User selection with avatars
+- **[Layout Components](docs/Layout.md)** - FlowLayout and AdaptiveTokenLayout
+
+### Additional Resources
+
+- **[API Documentation](https://yourusername.github.io/SwiftlyUI/documentation/swiftlyui/)**
+- **[Migration Guide](docs/migration.md)**
+- **[Contributing Guide](CONTRIBUTING.md)**
+
+## 🎨 Styling
+
+All components support customization through standard SwiftUI modifiers and environment values:
+
+```swift
+MultiPicker("Options", selection: $selection) {
+    ForEach(items, id: \.self) { item in
+        Text(item).multiPickerTag(item)
+    }
+}
+.multiPickerStyle(.navigationLink)  // Choose presentation style
+.font(.body)                         // Customize typography
+.tint(.blue)                         // Accent color
+```
+
+### Available Picker Styles
+
+- `.inline` - Items displayed directly in the view
+- `.navigationLink` - Navigate to a new screen (ideal for iOS)
+- `.sheet` - Present in a modal sheet
+- `.menu` - Dropdown/popover menu (default on macOS)
 
 ## 📱 Demo App
 
@@ -246,7 +191,7 @@ Check out the included demo app to see all components in action:
 ```bash
 git clone https://github.com/yourusername/SwiftlyUI.git
 cd SwiftlyUI-DemoApp
-swift build
+open SwiftlyUI-DemoApp.xcodeproj
 ```
 
 The demo app showcases:
@@ -257,22 +202,9 @@ The demo app showcases:
 
 ## 🛠️ Requirements
 
-- **iOS 15.0+** / **macOS 12.0+** / **tvOS 15.0+** / **watchOS 8.0+**
+- **iOS 16.0+** / **macOS 13.0+** / **tvOS 16.0+** / **watchOS 9.0+**
 - **Swift 5.7+**
 - **Xcode 14.0+**
-
-Some advanced features require newer OS versions:
-- FlowLayout requires iOS 16.0+ / macOS 13.0+ for optimal performance
-- Older OS versions use compatible fallback implementations
-
-## 📖 Documentation
-
-Comprehensive documentation is available:
-
-- **[API Documentation](https://yourusername.github.io/SwiftlyUI/documentation/swiftlyui/)**
-- **[Component Gallery](docs/components.md)**
-- **[Migration Guide](docs/migration.md)**
-- **[Contributing Guide](CONTRIBUTING.md)**
 
 ## 🤝 Contributing
 
@@ -283,7 +215,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 1. Clone the repository
 2. Open in Xcode or your preferred Swift development environment
 3. Run tests: `swift test`
-4. Build the demo app: `cd SwiftlyUI-DemoApp && swift build`
+4. Build the demo app: `cd SwiftlyUI-DemoApp && open SwiftlyUI-DemoApp.xcodeproj`
 
 ## 📄 License
 

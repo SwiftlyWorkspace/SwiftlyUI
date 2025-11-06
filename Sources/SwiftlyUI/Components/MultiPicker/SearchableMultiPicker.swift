@@ -1,5 +1,105 @@
 import SwiftUI
 
+// MARK: - Internal Types
+
+/// A multi-picker item with value, label, and optional section.
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+struct MultiPickerItem<Value: Hashable>: Equatable {
+    let value: Value
+    let label: String
+    let section: String?
+
+    static func == (lhs: MultiPickerItem<Value>, rhs: MultiPickerItem<Value>) -> Bool {
+        lhs.value == rhs.value && lhs.label == rhs.label && lhs.section == rhs.section
+    }
+}
+
+/// A preference key for collecting multi-picker items from the view hierarchy.
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+struct MultiPickerItemsPreferenceKey<Value: Hashable>: PreferenceKey {
+    static var defaultValue: [MultiPickerItem<Value>] { [] }
+
+    static func reduce(value: inout [MultiPickerItem<Value>], nextValue: () -> [MultiPickerItem<Value>]) {
+        value.append(contentsOf: nextValue())
+    }
+}
+
+// MARK: - Environment Key for Section
+
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+private struct MultiPickerSectionKey: EnvironmentKey {
+    static let defaultValue: String? = nil
+}
+
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+extension EnvironmentValues {
+    var multiPickerSection: String? {
+        get { self[MultiPickerSectionKey.self] }
+        set { self[MultiPickerSectionKey.self] = newValue }
+    }
+}
+
+// MARK: - View Extensions
+
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+extension View {
+    /// Tags this view with a value for multi-picker item collection.
+    /// For Text views in SearchableMultiPicker, this automatically captures the label.
+    public func multiPickerTag<Value: Hashable>(_ value: Value) -> some View {
+        MultiPickerTagView(value: value, content: self)
+    }
+}
+
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+private struct MultiPickerTagView<Value: Hashable, Content: View>: View {
+    let value: Value
+    let content: Content
+    @Environment(\.multiPickerSection) private var section
+
+    var body: some View {
+        content.preference(
+            key: MultiPickerItemsPreferenceKey<Value>.self,
+            value: [MultiPickerItem(value: value, label: "\(value)", section: section)]
+        )
+    }
+}
+
+// MARK: - Section Support
+
+/// A section container for MultiPicker that groups items under a header.
+///
+/// Use this instead of SwiftUI's `Section` when you want to organize
+/// MultiPicker items into sections with headers.
+///
+/// ## Example
+/// ```swift
+/// MultiPicker("Choose Foods", selection: $selection) {
+///     MultiPickerSection("Fruits") {
+///         Text("Apple").multiPickerTag("apple")
+///         Text("Banana").multiPickerTag("banana")
+///     }
+///     MultiPickerSection("Vegetables") {
+///         Text("Carrot").multiPickerTag("carrot")
+///     }
+/// }
+/// ```
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+public struct MultiPickerSection<Content: View>: View {
+    let header: String
+    let content: Content
+
+    public init(_ header: String, @ViewBuilder content: () -> Content) {
+        self.header = header
+        self.content = content()
+    }
+
+    public var body: some View {
+        content.environment(\.multiPickerSection, header)
+    }
+}
+
+// MARK: - SearchableMultiPicker
+
 /// A multi-selection picker with built-in search functionality.
 ///
 /// `SearchableMultiPicker` extends the base `MultiPicker` with search and filter capabilities,
@@ -32,14 +132,14 @@ import SwiftUI
 /// )
 /// ```
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
-public struct SearchableMultiPicker<SelectionValue: Hashable>: View {
+public struct SearchableMultiPicker<SelectionValue: Hashable, Content: View>: View {
     // MARK: - Properties
 
     /// The title/label for the picker.
     let title: String
 
-    /// Array of value-label pairs for the items.
-    let items: [(value: SelectionValue, label: String)]
+    /// Optional label text for LabeledContent integration.
+    let label: String?
 
     /// The set of currently selected values.
     @Binding var selection: Set<SelectionValue>
@@ -68,14 +168,21 @@ public struct SearchableMultiPicker<SelectionValue: Hashable>: View {
     /// Custom search filter function (optional).
     let searchFilter: (((value: SelectionValue, label: String), String) -> Bool)?
 
+    /// The content containing the items.
+    let content: Content
+
+    @State private var items: [MultiPickerItem<SelectionValue>] = []
     @Environment(\.multiPickerStyle) private var style
+
+    private var itemTuples: [(value: SelectionValue, label: String)] {
+        items.map { (value: $0.value, label: $0.label) }
+    }
 
     // MARK: - Initializers
 
-    /// Creates a searchable multi-picker.
+    /// Creates a searchable multi-picker with Picker-style API.
     /// - Parameters:
-    ///   - title: Title for the picker.
-    ///   - items: Array of value-label pairs.
+    ///   - titleKey: Title for the picker (also used as label if no content provided).
     ///   - selection: Binding to the set of selected values.
     ///   - searchText: Binding to the search text.
     ///   - minSelections: Minimum selections required (default: 0).
@@ -85,9 +192,9 @@ public struct SearchableMultiPicker<SelectionValue: Hashable>: View {
     ///   - requiresConfirmation: Whether to require confirmation (default: false).
     ///   - searchPlaceholder: Placeholder text for search (default: "Search...").
     ///   - searchFilter: Custom filter function (default: case-insensitive label search).
+    ///   - content: ViewBuilder closure containing items with `.tag()` modifiers.
     public init(
-        title: String,
-        items: [(value: SelectionValue, label: String)],
+        _ titleKey: String,
         selection: Binding<Set<SelectionValue>>,
         searchText: Binding<String>,
         minSelections: Int = 0,
@@ -96,10 +203,11 @@ public struct SearchableMultiPicker<SelectionValue: Hashable>: View {
         showClearAll: Bool = false,
         requiresConfirmation: Bool = false,
         searchPlaceholder: String = "Search...",
-        searchFilter: (((value: SelectionValue, label: String), String) -> Bool)? = nil
+        searchFilter: (((value: SelectionValue, label: String), String) -> Bool)? = nil,
+        @ViewBuilder content: () -> Content
     ) {
-        self.title = title
-        self.items = items
+        self.title = titleKey
+        self.label = titleKey
         self._selection = selection
         self._searchText = searchText
         self.minSelections = minSelections
@@ -109,11 +217,26 @@ public struct SearchableMultiPicker<SelectionValue: Hashable>: View {
         self.requiresConfirmation = requiresConfirmation
         self.searchPlaceholder = searchPlaceholder
         self.searchFilter = searchFilter
+        self.content = content()
     }
 
     // MARK: - Body
 
+    @ViewBuilder
     public var body: some View {
+        pickerContent
+            .background(
+                content
+                    .frame(width: 0, height: 0)
+                    .hidden()
+                    .onPreferenceChange(MultiPickerItemsPreferenceKey<SelectionValue>.self) { collectedItems in
+                        items = collectedItems
+                    }
+            )
+    }
+
+    @ViewBuilder
+    private var pickerContent: some View {
         // SearchableMultiPicker wraps the entire content (search + picker)
         // in a style configuration. This works for inline/sheet/navigationLink.
         // Note: Menu style is not recommended for SearchableMultiPicker since
@@ -153,14 +276,41 @@ public struct SearchableMultiPicker<SelectionValue: Hashable>: View {
             }
         }
 
+        // Create label with AdaptiveTokenLayout for selected items
+        // Use generic placeholder when wrapping in LabeledContent to avoid duplication
+        let selectedLabels = itemTuples.filter { selection.contains($0.value) }.map { $0.label }.sorted()
+
+        let labelView = HStack(spacing: 8) {
+            AdaptiveTokenLayout(
+                items: selectedLabels,
+                placeholder: label != nil ? "Select..." : title
+            )
+
+            if selection.count > 0 {
+                Text("(\(selection.count))")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+
         let configuration = MultiPickerStyleConfiguration(
-            label: AnyView(Text(title)),
+            label: AnyView(labelView),
             content: AnyView(content),
             selectionCount: selection.count,
+            selectedItems: selectedLabels,
             requiresConfirmation: requiresConfirmation
         )
 
-        return style.makeBody(configuration: configuration)
+        let pickerView = style.makeBody(configuration: configuration)
+
+        // If label is provided, wrap in LabeledContent
+        if let labelText = label {
+            LabeledContent(labelText) {
+                pickerView
+            }
+        } else {
+            pickerView
+        }
     }
 
     // MARK: - Private Views
@@ -232,14 +382,14 @@ public struct SearchableMultiPicker<SelectionValue: Hashable>: View {
 
     /// Items filtered by search text.
     private var filteredItems: [(value: SelectionValue, label: String)] {
-        guard !searchText.isEmpty else { return items }
+        guard !searchText.isEmpty else { return itemTuples }
 
         if let customFilter = searchFilter {
-            return items.filter { customFilter($0, searchText) }
+            return itemTuples.filter { customFilter($0, searchText) }
         } else {
             // Default filter: case-insensitive search in label
             let query = searchText.lowercased()
-            return items.filter { $0.label.lowercased().contains(query) }
+            return itemTuples.filter { $0.label.lowercased().contains(query) }
         }
     }
 
@@ -296,32 +446,535 @@ public struct SearchableMultiPicker<SelectionValue: Hashable>: View {
     }
 }
 
-// MARK: - Preview
+// MARK: - Previews
 
-#Preview("Searchable MultiPicker") {
+#Preview("Basic Comparison") {
+    struct PreviewWrapper: View {
+        @State private var singleSelection: String = "Apple"
+        @State private var multiSelection: Set<String> = []
+        @State private var searchText = ""
+
+        let fruits = [
+            "Apple", "Apricot", "Avocado", "Banana", "Blueberry", "Blackberry",
+            "Cherry", "Coconut", "Cranberry", "Date", "Dragonfruit", "Elderberry",
+            "Fig", "Grape", "Grapefruit", "Guava", "Honeydew", "Huckleberry",
+            "Jackfruit", "Kiwi", "Kumquat", "Lemon", "Lime", "Lychee",
+            "Mango", "Melon", "Mulberry", "Nectarine", "Orange", "Papaya"
+        ]
+
+        var body: some View {
+            NavigationStack {
+                Form {
+                    Section("Standard SwiftUI Picker") {
+                        Picker("Single Selection", selection: $singleSelection) {
+                            ForEach(fruits, id: \.self) { fruit in
+                                Text(fruit).tag(fruit)
+                            }
+                        }
+                    }
+                    
+                    Divider()
+                        .padding(.vertical)
+
+
+                    Section("Searchable MultiPicker") {
+                        SearchableMultiPicker(
+                            "Multiple Selection",
+                            selection: $multiSelection,
+                            searchText: $searchText
+                        ) {
+                            ForEach(fruits, id: \.self) { fruit in
+                                Text(fruit).multiPickerTag(fruit)
+                            }
+                        }
+                        .multiPickerStyle(.menu)
+                    }
+                    Section("Selected Fruits") {
+                        if multiSelection.isEmpty {
+                            Text("None selected")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(Array(multiSelection.sorted()), id: \.self) { fruit in
+                                Text(fruit)
+                            }
+                        }
+                    }
+                }
+                .navigationTitle("Picker Comparison")
+            }
+            .padding()
+        }
+    }
+
+    return PreviewWrapper()
+}
+
+#Preview("Different Styles") {
+    struct PreviewWrapper: View {
+        @State private var inlineSelection: Set<String> = []
+        @State private var inlineSearchText = ""
+        @State private var navigationSelection: Set<String> = []
+        @State private var navigationSearchText = ""
+        @State private var sheetSelection: Set<String> = []
+        @State private var sheetSearchText = ""
+        @State private var menuSelection: Set<String> = []
+        @State private var menuSearchText = ""
+
+        let countries = [
+            "Argentina", "Australia", "Brazil", "Canada", "China", "Egypt",
+            "France", "Germany", "India", "Italy", "Japan", "Mexico",
+            "Netherlands", "Norway", "Portugal", "Russia", "Spain", "Sweden",
+            "Switzerland", "United Kingdom", "United States"
+        ]
+
+        var body: some View {
+            NavigationStack {
+                ScrollView {
+                    VStack(spacing: 30) {
+                        // Inline Style
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Inline Style")
+                                .font(.title2)
+                                .fontWeight(.bold)
+
+                            Text("Displays items directly with inline search. Best for small to medium lists.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+
+                            SearchableMultiPicker(
+                                "Select Countries",
+                                selection: $inlineSelection,
+                                searchText: $inlineSearchText
+                            ) {
+                                ForEach(countries, id: \.self) { country in
+                                    Text(country).multiPickerTag(country)
+                                }
+                            }
+                            .multiPickerStyle(.inline)
+                            .padding()
+                            .background(Color.secondary.opacity(0.1))
+                            .cornerRadius(12)
+                        }
+
+                        Divider()
+
+                        // Navigation Link Style
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Navigation Link Style")
+                                .font(.title2)
+                                .fontWeight(.bold)
+
+                            Text("Pushes to a new screen with search at the top. Good for longer lists.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+
+                            SearchableMultiPicker(
+                                "Select Countries",
+                                selection: $navigationSelection,
+                                searchText: $navigationSearchText
+                            ) {
+                                ForEach(countries, id: \.self) { country in
+                                    Text(country).multiPickerTag(country)
+                                }
+                            }
+                            .multiPickerStyle(.navigationLink)
+                            .padding()
+                            .background(Color.secondary.opacity(0.1))
+                            .cornerRadius(12)
+                        }
+
+                        Divider()
+
+                        // Sheet Style
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Sheet Style")
+                                .font(.title2)
+                                .fontWeight(.bold)
+
+                            Text("Presents items in a modal sheet with search. Great for focused selection.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+
+                            SearchableMultiPicker(
+                                "Select Countries",
+                                selection: $sheetSelection,
+                                searchText: $sheetSearchText
+                            ) {
+                                ForEach(countries, id: \.self) { country in
+                                    Text(country).multiPickerTag(country)
+                                }
+                            }
+                            .multiPickerStyle(.sheet)
+                            .padding()
+                            .background(Color.secondary.opacity(0.1))
+                            .cornerRadius(12)
+                        }
+
+                        Divider()
+
+                        // Menu Style
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Menu Style")
+                                .font(.title2)
+                                .fontWeight(.bold)
+
+                            Text("Shows items in a popover menu with search. Compact and efficient.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+
+                            SearchableMultiPicker(
+                                "Select Countries",
+                                selection: $menuSelection,
+                                searchText: $menuSearchText
+                            ) {
+                                ForEach(countries, id: \.self) { country in
+                                    Text(country).multiPickerTag(country)
+                                }
+                            }
+                            .multiPickerStyle(.menu)
+                            .padding()
+                            .background(Color.secondary.opacity(0.1))
+                            .cornerRadius(12)
+                        }
+                    }
+                    .padding()
+                }
+                .navigationTitle("Picker Styles")
+            }
+            .padding()
+            .frame(minHeight: 800)
+        }
+    }
+
+    return PreviewWrapper()
+}
+
+#Preview("With Bulk Actions") {
     struct PreviewWrapper: View {
         @State private var selection: Set<String> = []
         @State private var searchText = ""
 
-        let items = [
-            "Apple", "Banana", "Cherry", "Date", "Elderberry",
-            "Fig", "Grape", "Honeydew", "Ice Cream Bean", "Jackfruit",
-            "Kiwi", "Lemon", "Mango", "Nectarine", "Orange",
-            "Papaya", "Quince", "Raspberry", "Strawberry", "Tangerine"
-        ].map { (value: $0, label: $0) }
+        let programming = [
+            "C", "C++", "C#", "Go", "Java", "JavaScript", "Kotlin",
+            "Objective-C", "PHP", "Python", "Ruby", "Rust", "Scala",
+            "Swift", "TypeScript", "WebAssembly"
+        ]
 
         var body: some View {
             NavigationStack {
-                SearchableMultiPicker(
-                    title: "Select Fruits",
-                    items: items,
-                    selection: $selection,
-                    searchText: $searchText,
-                    showSelectAll: true,
-                    showClearAll: true
-                )
-                .navigationTitle("Demo")
+                Form {
+                    Section("Programming Languages") {
+                        SearchableMultiPicker(
+                            "Select Languages",
+                            selection: $selection,
+                            searchText: $searchText,
+                            showSelectAll: true,
+                            showClearAll: true
+                        ) {
+                            ForEach(programming, id: \.self) { lang in
+                                Text(lang).multiPickerTag(lang)
+                            }
+                        }
+                        .multiPickerStyle(.menu)
+                    }
+
+                    Section("Selection Summary") {
+                        HStack {
+                            Text("Selected:")
+                            Spacer()
+                            Text("\(selection.count) of \(programming.count)")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .navigationTitle("Bulk Actions")
             }
+            .padding()
+        }
+    }
+
+    return PreviewWrapper()
+}
+
+#Preview("Selection Limits") {
+    struct PreviewWrapper: View {
+        @State private var minSelection: Set<String> = []
+        @State private var minSearchText = ""
+        @State private var maxSelection: Set<String> = []
+        @State private var maxSearchText = ""
+        @State private var rangeSelection: Set<String> = []
+        @State private var rangeSearchText = ""
+
+        let colors = [
+            "Amber", "Blue", "Brown", "Cyan", "Green", "Indigo",
+            "Magenta", "Orange", "Pink", "Purple", "Red", "Teal",
+            "Violet", "Yellow"
+        ]
+
+        var body: some View {
+            NavigationStack {
+                Form {
+                    Section("Minimum 2 Required") {
+                        SearchableMultiPicker(
+                            "Choose Colors",
+                            selection: $minSelection,
+                            searchText: $minSearchText,
+                            minSelections: 2
+                        ) {
+                            ForEach(colors, id: \.self) { color in
+                                Text(color).multiPickerTag(color)
+                            }
+                        }
+                        .multiPickerStyle(.menu)
+                    }
+
+                    Section("Maximum 4 Allowed") {
+                        SearchableMultiPicker(
+                            "Choose Colors",
+                            selection: $maxSelection,
+                            searchText: $maxSearchText,
+                            maxSelections: 4
+                        ) {
+                            ForEach(colors, id: \.self) { color in
+                                Text(color).multiPickerTag(color)
+                            }
+                        }
+                        .multiPickerStyle(.menu)
+                    }
+
+                    Section("3-5 Required") {
+                        SearchableMultiPicker(
+                            "Choose Colors",
+                            selection: $rangeSelection,
+                            searchText: $rangeSearchText,
+                            minSelections: 3,
+                            maxSelections: 5,
+                            showSelectAll: true,
+                            showClearAll: true
+                        ) {
+                            ForEach(colors, id: \.self) { color in
+                                Text(color).multiPickerTag(color)
+                            }
+                        }
+                        .multiPickerStyle(.menu)
+                    }
+                }
+                .navigationTitle("Selection Limits")
+            }
+            .padding()
+        }
+    }
+
+    return PreviewWrapper()
+}
+
+#Preview("With Confirmation") {
+    struct PreviewWrapper: View {
+        @State private var selection: Set<String> = []
+        @State private var searchText = ""
+
+        let cities = [
+            "Amsterdam", "Athens", "Barcelona", "Berlin", "Brussels",
+            "Copenhagen", "Dublin", "Edinburgh", "Florence", "Geneva",
+            "Hamburg", "Helsinki", "Istanbul", "Lisbon", "London",
+            "Madrid", "Milan", "Munich", "Oslo", "Paris",
+            "Prague", "Rome", "Stockholm", "Venice", "Vienna", "Zurich"
+        ]
+
+        var body: some View {
+            NavigationStack {
+                Form {
+                    Section("Select Destinations") {
+                        SearchableMultiPicker(
+                            "European Cities",
+                            selection: $selection,
+                            searchText: $searchText,
+                            minSelections: 1,
+                            maxSelections: 5,
+                            showSelectAll: true,
+                            showClearAll: true,
+                            requiresConfirmation: true
+                        ) {
+                            ForEach(cities, id: \.self) { city in
+                                Text(city).multiPickerTag(city)
+                            }
+                        }
+                        .multiPickerStyle(.menu)
+                    }
+
+                    Section("Confirmed Destinations") {
+                        if selection.isEmpty {
+                            Text("No destinations selected")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(Array(selection.sorted()), id: \.self) { city in
+                                Label(city, systemImage: "location.fill")
+                            }
+                        }
+                    }
+                }
+                .navigationTitle("Confirmation Mode")
+            }
+            .padding()
+        }
+    }
+
+    return PreviewWrapper()
+}
+
+#Preview("LabeledContent Integration") {
+    struct PreviewWrapper: View {
+        @State private var fruits: Set<String> = ["Apple"]
+        @State private var fruitsSearch = ""
+        @State private var vegetables: Set<String> = ["Carrot", "Broccoli"]
+        @State private var vegetablesSearch = ""
+        @State private var proteins: Set<String> = []
+        @State private var proteinsSearch = ""
+
+        let fruitOptions = [
+            "Apple", "Banana", "Cherry", "Date", "Elderberry",
+            "Fig", "Grape", "Kiwi", "Lemon", "Mango"
+        ]
+
+        let vegetableOptions = [
+            "Asparagus", "Broccoli", "Carrot", "Celery", "Cucumber",
+            "Eggplant", "Kale", "Lettuce", "Spinach", "Tomato"
+        ]
+
+        let proteinOptions = [
+            "Beef", "Chicken", "Eggs", "Fish", "Lentils",
+            "Pork", "Salmon", "Tofu", "Turkey", "Tuna"
+        ]
+
+        var body: some View {
+            NavigationStack {
+                Form {
+                    Section("Meal Planning") {
+                        LabeledContent("Fruits") {
+                            SearchableMultiPicker(
+                                "Select Fruits",
+                                selection: $fruits,
+                                searchText: $fruitsSearch
+                            ) {
+                                ForEach(fruitOptions, id: \.self) { fruit in
+                                    Text(fruit).multiPickerTag(fruit)
+                                }
+                            }
+                            .multiPickerStyle(.menu)
+                        }
+
+                        LabeledContent("Vegetables") {
+                            SearchableMultiPicker(
+                                "Select Vegetables",
+                                selection: $vegetables,
+                                searchText: $vegetablesSearch,
+                                minSelections: 1
+                            ) {
+                                ForEach(vegetableOptions, id: \.self) { veg in
+                                    Text(veg).multiPickerTag(veg)
+                                }
+                            }
+                            .multiPickerStyle(.menu)
+                        }
+
+                        LabeledContent("Proteins") {
+                            SearchableMultiPicker(
+                                "Select Proteins",
+                                selection: $proteins,
+                                searchText: $proteinsSearch,
+                                maxSelections: 3
+                            ) {
+                                ForEach(proteinOptions, id: \.self) { protein in
+                                    Text(protein).multiPickerTag(protein)
+                                }
+                            }
+                            .multiPickerStyle(.menu)
+                        }
+                    }
+
+                    Section("Total Selections") {
+                        HStack {
+                            Text("Items selected:")
+                            Spacer()
+                            Text("\(fruits.count + vegetables.count + proteins.count)")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .navigationTitle("Meal Planner")
+            }
+            .padding()
+        }
+    }
+
+    return PreviewWrapper()
+}
+
+#Preview("Custom Search Filter") {
+    struct PreviewWrapper: View {
+        @State private var selection: Set<String> = []
+        @State private var searchText = ""
+
+        // Items with both name and category for custom search
+        let items = [
+            "Swift - Programming Language",
+            "Python - Programming Language",
+            "JavaScript - Programming Language",
+            "Xcode - Development Tool",
+            "VS Code - Development Tool",
+            "Git - Version Control",
+            "Docker - Container Platform",
+            "Kubernetes - Orchestration",
+            "React - Frontend Framework",
+            "SwiftUI - UI Framework"
+        ]
+
+        var body: some View {
+            NavigationStack {
+                Form {
+                    Section("Developer Tools & Languages") {
+                        SearchableMultiPicker(
+                            "Select Technologies",
+                            selection: $selection,
+                            searchText: $searchText,
+                            searchPlaceholder: "Search by name or category...",
+                            searchFilter: { item, query in
+                                // Custom filter that searches both parts
+                                item.label.localizedCaseInsensitiveContains(query)
+                            }
+                        ) {
+                            ForEach(items, id: \.self) { item in
+                                Text(item).multiPickerTag(item)
+                            }
+                        }
+                        .multiPickerStyle(.menu)
+                    }
+
+                    Section("Your Stack") {
+                        if selection.isEmpty {
+                            Text("No technologies selected")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(Array(selection.sorted()), id: \.self) { item in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    let parts = item.split(separator: " - ")
+                                    if parts.count == 2 {
+                                        Text(String(parts[0]))
+                                            .font(.headline)
+                                        Text(String(parts[1]))
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    } else {
+                                        Text(item)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                .navigationTitle("Custom Search")
+            }
+            .padding()
         }
     }
 
