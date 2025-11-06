@@ -91,11 +91,19 @@ public struct NavigationLinkMultiPickerStyle: MultiPickerStyle {
 /// A multi-picker style that presents items in a sheet.
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 public struct SheetMultiPickerStyle: MultiPickerStyle {
-    @State private var isPresented = false
-
     public init() {}
 
     public func makeBody(configuration: Configuration) -> some View {
+        SheetMultiPickerStyleView(configuration: configuration)
+    }
+}
+
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+private struct SheetMultiPickerStyleView: View {
+    let configuration: MultiPickerStyleConfiguration
+    @State private var isPresented = false
+
+    var body: some View {
         Button {
             isPresented = true
         } label: {
