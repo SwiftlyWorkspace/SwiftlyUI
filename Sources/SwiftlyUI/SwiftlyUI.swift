@@ -50,11 +50,64 @@
 /// }
 /// ```
 ///
+/// ### Multi-Picker System
+/// A comprehensive multi-selection picker system with multiple presentation styles
+/// and powerful features for selecting multiple items from lists.
+///
+/// #### Basic MultiPicker
+/// ```swift
+/// @State private var selection: Set<Int> = []
+///
+/// MultiPicker(
+///     title: "Choose Options",
+///     items: [
+///         (value: 1, label: "Option 1"),
+///         (value: 2, label: "Option 2"),
+///         (value: 3, label: "Option 3")
+///     ],
+///     selection: $selection
+/// )
+/// .multiPickerStyle(.inline)
+/// ```
+///
+/// #### SearchableMultiPicker
+/// For large lists with search/filter functionality:
+/// ```swift
+/// @State private var selection: Set<String> = []
+/// @State private var searchText = ""
+///
+/// SearchableMultiPicker(
+///     title: "Select Countries",
+///     items: countries.map { (value: $0.id, label: $0.name) },
+///     selection: $selection,
+///     searchText: $searchText
+/// )
+/// ```
+///
+/// #### GroupedMultiPicker (Sectioned)
+/// For categorized/sectioned data:
+/// ```swift
+/// @State private var selection: Set<String> = []
+///
+/// GroupedMultiPicker(
+///     title: "Select Foods",
+///     sections: [
+///         (header: "Fruits", items: [(value: "apple", label: "Apple")]),
+///         (header: "Vegetables", items: [(value: "carrot", label: "Carrot")])
+///     ],
+///     selection: $selection
+/// )
+/// ```
+///
+/// **Available Styles**: `.inline`, `.navigationLink`, `.sheet`, `.menu`
+/// **Features**: Selection limits, bulk actions, search, sections, customizable display
+///
 /// ### Layout Components
 /// - `FlowLayout`: A layout that arranges subviews in rows, wrapping to new lines as needed
 ///
 /// ## Requirements
-/// - iOS 15.0+ / macOS 12.0+ / tvOS 15.0+ / watchOS 8.0+
+/// - iOS 16.0+ / macOS 13.0+ / tvOS 16.0+ / watchOS 9.0+ (MultiPicker components)
+/// - iOS 15.0+ / macOS 12.0+ / tvOS 15.0+ / watchOS 8.0+ (Other components)
 /// - Swift 5.7+
 import SwiftUI
 
