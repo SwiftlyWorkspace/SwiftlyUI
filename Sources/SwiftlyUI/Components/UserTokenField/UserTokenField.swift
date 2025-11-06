@@ -180,9 +180,9 @@ public struct UserTokenField<User: UserRepresentable>: View {
     @ViewBuilder
     private var searchField: some View {
         if selectedUsers.count < maxUsers {
-            HStack(spacing: 4) {
+            HStack(alignment: .center, spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .font(.caption)
+                    .font(.system(size: 14))
                     .foregroundStyle(.secondary)
 
                 TextField(placeholder, text: $searchText)
@@ -194,8 +194,8 @@ public struct UserTokenField<User: UserRepresentable>: View {
                     }
                     .accessibilityLabel("Search for users")
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .frame(height: 32)
+            .padding(.horizontal, 12)
             .background(Color.controlBackground)
             .cornerRadius(20)
         }
