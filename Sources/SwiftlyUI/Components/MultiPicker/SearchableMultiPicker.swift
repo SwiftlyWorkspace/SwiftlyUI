@@ -114,29 +114,118 @@ public struct SearchableMultiPicker<SelectionValue: Hashable>: View {
     // MARK: - Body
 
     public var body: some View {
-        VStack(spacing: 0) {
+        // SearchableMultiPicker wraps the entire content (search + picker)
+        // in a style configuration. This works for inline/sheet/navigationLink.
+        // Note: Menu style is not recommended for SearchableMultiPicker since
+        // Menu can't display search fields. Use regular MultiPicker with menu style instead.
+
+        let content = VStack(spacing: 0) {
             // Search field
             searchField
 
             Divider()
 
-            // Picker content with filtered items
-            MultiPicker(
-                title: title,
-                items: filteredItems,
-                selection: $selection,
-                minSelections: minSelections,
-                maxSelections: maxSelections,
-                showSelectAll: showSelectAll,
-                showClearAll: showClearAll,
-                requiresConfirmation: requiresConfirmation
-            )
+            // Filtered items
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Bulk actions
+                    if showSelectAll || showClearAll {
+                        bulkActionsBar
+                        Divider()
+                    }
 
-            // Empty state for no results
+                    // Items
+                    ForEach(Array(filteredItems.enumerated()), id: \.element.value) { _, item in
+                        MultiPickerRow(
+                            isSelected: selection.contains(item.value),
+                            isDisabled: isItemDisabled(item.value),
+                            action: { toggleSelection(item.value) }
+                        ) {
+                            Text(item.label)
+                        }
+                    }
+                }
+            }
+
+            // Empty state
             if filteredItems.isEmpty && !searchText.isEmpty {
                 emptyState
             }
         }
+
+        let configuration = MultiPickerStyleConfiguration(
+            label: AnyView(Text(title)),
+            content: AnyView(content),
+            selectionCount: selection.count,
+            requiresConfirmation: requiresConfirmation
+        )
+
+        return style.makeBody(configuration: configuration)
+    }
+
+    // MARK: - Private Views
+
+    /// Bulk actions bar.
+    @ViewBuilder
+    private var bulkActionsBar: some View {
+        HStack(spacing: 16) {
+            if showSelectAll {
+                Button("Select All") {
+                    let availableValues = filteredItems.prefix(
+                        maxSelections.map { $0 - selection.count } ?? filteredItems.count
+                    ).map(\.value)
+                    selection.formUnion(availableValues)
+                }
+                .disabled(!canSelectAll)
+                .buttonStyle(.plain)
+                .font(.subheadline)
+                .foregroundStyle(canSelectAll ? .blue : .secondary)
+            }
+
+            if showClearAll {
+                Button("Clear All") {
+                    selection.removeAll()
+                }
+                .disabled(selection.isEmpty)
+                .buttonStyle(.plain)
+                .font(.subheadline)
+                .foregroundStyle(!selection.isEmpty ? .blue : .secondary)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    // MARK: - Helper Methods
+
+    private func isItemDisabled(_ value: SelectionValue) -> Bool {
+        if selection.contains(value) { return false }
+        if let max = maxSelections, selection.count >= max { return true }
+        return false
+    }
+
+    private func toggleSelection(_ value: SelectionValue) {
+        if selection.contains(value) {
+            if selection.count > minSelections {
+                selection.remove(value)
+            }
+        } else {
+            if let max = maxSelections, selection.count >= max {
+                return
+            }
+            selection.insert(value)
+        }
+    }
+
+    private var canSelectAll: Bool {
+        let itemsToSelect = filteredItems.filter { !selection.contains($0.value) }
+        if itemsToSelect.isEmpty { return false }
+        if let max = maxSelections {
+            return selection.count < max
+        }
+        return true
     }
 
     // MARK: - Private Computed Properties
