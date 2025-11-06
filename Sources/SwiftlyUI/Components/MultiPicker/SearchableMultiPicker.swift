@@ -114,9 +114,48 @@ public struct SearchableMultiPicker<SelectionValue: Hashable>: View {
     // MARK: - Body
 
     public var body: some View {
+        // SearchableMultiPicker wraps the entire content (search + picker)
+        // in a style configuration. This works for inline/sheet/navigationLink.
+        // Note: Menu style is not recommended for SearchableMultiPicker since
+        // Menu can't display search fields. Use regular MultiPicker with menu style instead.
+
+        let content = VStack(spacing: 0) {
+            // Search field
+            searchField
+
+            Divider()
+
+            // Filtered items
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Bulk actions
+                    if showSelectAll || showClearAll {
+                        bulkActionsBar
+                        Divider()
+                    }
+
+                    // Items
+                    ForEach(Array(filteredItems.enumerated()), id: \.element.value) { _, item in
+                        MultiPickerRow(
+                            isSelected: selection.contains(item.value),
+                            isDisabled: isItemDisabled(item.value),
+                            action: { toggleSelection(item.value) }
+                        ) {
+                            Text(item.label)
+                        }
+                    }
+                }
+            }
+
+            // Empty state
+            if filteredItems.isEmpty && !searchText.isEmpty {
+                emptyState
+            }
+        }
+
         let configuration = MultiPickerStyleConfiguration(
             label: AnyView(Text(title)),
-            content: AnyView(pickerContent),
+            content: AnyView(content),
             selectionCount: selection.count,
             requiresConfirmation: requiresConfirmation
         )
@@ -124,49 +163,9 @@ public struct SearchableMultiPicker<SelectionValue: Hashable>: View {
         return style.makeBody(configuration: configuration)
     }
 
-    /// The complete picker content including search field and items.
-    private var pickerContent: some View {
-        VStack(spacing: 0) {
-            // Search field at the top of the picker content
-            searchField
+    // MARK: - Private Views
 
-            Divider()
-
-            // Filtered items list
-            itemsList
-
-            // Empty state for no results
-            if filteredItems.isEmpty && !searchText.isEmpty {
-                emptyState
-            }
-        }
-    }
-
-    /// The scrollable list of items.
-    private var itemsList: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                // Bulk action buttons
-                if showSelectAll || showClearAll {
-                    bulkActionsBar
-                    Divider()
-                }
-
-                // Items
-                ForEach(Array(filteredItems.enumerated()), id: \.element.value) { _, item in
-                    MultiPickerRow(
-                        isSelected: selection.contains(item.value),
-                        isDisabled: isItemDisabled(item.value),
-                        action: { toggleSelection(item.value) }
-                    ) {
-                        Text(item.label)
-                    }
-                }
-            }
-        }
-    }
-
-    /// Bulk actions bar (Select All / Clear All).
+    /// Bulk actions bar.
     @ViewBuilder
     private var bulkActionsBar: some View {
         HStack(spacing: 16) {
@@ -201,22 +200,18 @@ public struct SearchableMultiPicker<SelectionValue: Hashable>: View {
 
     // MARK: - Helper Methods
 
-    /// Whether an item is disabled due to max selection limit.
     private func isItemDisabled(_ value: SelectionValue) -> Bool {
         if selection.contains(value) { return false }
         if let max = maxSelections, selection.count >= max { return true }
         return false
     }
 
-    /// Toggles selection for an item.
     private func toggleSelection(_ value: SelectionValue) {
         if selection.contains(value) {
-            // Only allow deselection if it doesn't violate min constraint
             if selection.count > minSelections {
                 selection.remove(value)
             }
         } else {
-            // Only allow selection if it doesn't violate max constraint
             if let max = maxSelections, selection.count >= max {
                 return
             }
@@ -224,7 +219,6 @@ public struct SearchableMultiPicker<SelectionValue: Hashable>: View {
         }
     }
 
-    /// Whether "Select All" button should be enabled.
     private var canSelectAll: Bool {
         let itemsToSelect = filteredItems.filter { !selection.contains($0.value) }
         if itemsToSelect.isEmpty { return false }
