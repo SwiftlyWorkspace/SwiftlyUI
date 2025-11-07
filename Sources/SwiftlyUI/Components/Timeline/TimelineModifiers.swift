@@ -138,4 +138,44 @@ extension View {
             .timelineItemPadding(itemPadding)
             .timelineIndicatorPosition(indicatorPosition)
     }
+
+    // MARK: - Branch Customization
+
+    /// Sets the width of lanes in branching timelines.
+    ///
+    /// This determines the horizontal spacing between parallel branches.
+    /// Only affects timelines with parent-child relationships.
+    ///
+    /// - Parameter width: The width of each lane in points. Default is 200.
+    public func timelineBranchLaneWidth(_ width: CGFloat) -> some View {
+        environment(\.timelineBranchLaneWidth, width)
+    }
+
+    /// Sets whether automatic branch detection is enabled.
+    ///
+    /// When enabled, the timeline will automatically detect parent-child
+    /// relationships and display branches. Disable to force linear layout
+    /// even when parent IDs are present.
+    ///
+    /// - Parameter enabled: Whether branch detection is enabled. Default is true.
+    public func timelineBranchDetection(_ enabled: Bool) -> some View {
+        environment(\.timelineBranchDetectionEnabled, enabled)
+    }
+
+    /// Sets the curve radius for branch connectors.
+    ///
+    /// Controls how sharply connectors curve when moving between lanes.
+    /// Larger values create smoother, more gradual curves.
+    ///
+    /// - Parameter radius: The curve radius in points. Default is 20.
+    public func timelineBranchConnectorCurve(_ radius: CGFloat) -> some View {
+        environment(\.timelineBranchConnectorCurve, radius)
+    }
+
+    /// Sets whether branch indicators are shown at branch/merge points.
+    ///
+    /// - Parameter enabled: Whether branch indicators are shown. Default is true.
+    public func timelineBranchIndicators(_ enabled: Bool) -> some View {
+        environment(\.timelineBranchIndicatorEnabled, enabled)
+    }
 }

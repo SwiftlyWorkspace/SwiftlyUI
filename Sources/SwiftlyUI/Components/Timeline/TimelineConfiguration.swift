@@ -184,6 +184,16 @@ struct TimelineSectionCollapsibleKey: EnvironmentKey {
     static let defaultValue: Bool = false
 }
 
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+struct TimelineBranchLaneWidthKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 200
+}
+
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+struct TimelineBranchDetectionEnabledKey: EnvironmentKey {
+    static let defaultValue: Bool = true
+}
+
 // MARK: - Environment Values Extension
 
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
@@ -266,5 +276,15 @@ extension EnvironmentValues {
     var timelineSectionCollapsible: Bool {
         get { self[TimelineSectionCollapsibleKey.self] }
         set { self[TimelineSectionCollapsibleKey.self] = newValue }
+    }
+
+    var timelineBranchLaneWidth: CGFloat {
+        get { self[TimelineBranchLaneWidthKey.self] }
+        set { self[TimelineBranchLaneWidthKey.self] = newValue }
+    }
+
+    var timelineBranchDetectionEnabled: Bool {
+        get { self[TimelineBranchDetectionEnabledKey.self] }
+        set { self[TimelineBranchDetectionEnabledKey.self] = newValue }
     }
 }
