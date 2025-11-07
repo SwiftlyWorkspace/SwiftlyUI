@@ -184,46 +184,61 @@ public struct HorizontalTimelineStyle: TimelineStyle {
         let items = configuration.items
 
         return ScrollView(.horizontal, showsIndicators: true) {
-            HStack(alignment: .top, spacing: 0) {
-                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                    HStack(spacing: 0) {
-                        // Item content
-                        VStack(spacing: 12) {
-                            // Indicator
+            VStack(spacing: 0) {
+                // Top row: Indicators with connectors running through them
+                ZStack(alignment: .leading) {
+                    // Continuous connector line running through all indicators
+                    if items.count > 1 {
+                        HStack(spacing: 0) {
+                            Spacer()
+                                .frame(width: 58) // Half of first item width (116/2)
+
+                            TimelineConnectorView(
+                                isVertical: false,
+                                length: CGFloat((items.count - 1) * 116)
+                            )
+
+                            Spacer()
+                                .frame(width: 58) // Half of last item width
+                        }
+                    }
+
+                    // Indicators on top of the line
+                    HStack(spacing: 100) {
+                        ForEach(items, id: \.id) { item in
                             TimelineIndicatorView(
                                 status: item.status,
                                 isSelected: configuration.selection.contains(item.id)
                             )
-
-                            // Content below indicator
-                            VStack(alignment: .center, spacing: 4) {
-                                if let title = item.title {
-                                    Text(title)
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                        .multilineTextAlignment(.center)
-                                        .lineLimit(2)
-                                }
-
-                                Text(item.date, style: .relative)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .frame(width: 100)
-                            .padding(.horizontal, 8)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                configuration.onItemTap?(item)
-                            }
-                        }
-
-                        // Horizontal connector between items
-                        if index < items.count - 1 {
-                            TimelineConnectorView(isVertical: false, length: 40)
-                                .padding(.top, 8) // Align with indicator center
                         }
                     }
                 }
+                .padding(.top, 20)
+
+                // Bottom row: Content below each indicator
+                HStack(alignment: .top, spacing: 100) {
+                    ForEach(items, id: \.id) { item in
+                        VStack(alignment: .center, spacing: 4) {
+                            if let title = item.title {
+                                Text(title)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(3)
+                            }
+
+                            Text(item.date, style: .relative)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(width: 116)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            configuration.onItemTap?(item)
+                        }
+                    }
+                }
+                .padding(.top, 12)
             }
             .padding()
         }
