@@ -302,75 +302,97 @@ public struct GitHubTimelineStyle: TimelineStyle {
     public init() {}
 
     public func makeBody(configuration: Configuration) -> some View {
-        ScrollView {
+        let items = configuration.items
+        let lastItemId = items.last?.id
+
+        return ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(configuration.items, id: \.id) { item in
-                    HStack(alignment: .top, spacing: 12) {
-                        // Indicator column with connector
-                        VStack(spacing: 0) {
-                            TimelineIndicatorView(
-                                status: item.status,
-                                isSelected: configuration.selection.contains(item.id)
-                            )
-                            .environment(\.timelineIndicatorSize, 10)
-
-                            if item.id != configuration.items.last?.id {
-                                TimelineConnectorView(isVertical: true)
-                                    .frame(height: nil)
-                                    .environment(\.timelineConnectorWidth, 1.5)
-                            }
-                        }
-
-                        // Content
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                if let title = item.title {
-                                    Text(title)
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                }
-
-                                Spacer()
-
-                                Text(item.date, style: .relative)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            if let description = item.description {
-                                Text(description)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
-                            }
-
-                            if let status = item.status {
-                                HStack(spacing: 4) {
-                                    Image(systemName: status.defaultIcon)
-                                        .font(.caption2)
-                                    Text(status.displayName)
-                                        .font(.caption2)
-                                }
-                                .foregroundStyle(status.color)
-                            }
-                        }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(configuration.selection.contains(item.id) ? Color.blue.opacity(0.05) : Color(.secondarySystemBackground))
-                        )
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            configuration.onItemTap?(item)
-                        }
-                    }
-                    .padding(.bottom, item.id == configuration.items.last?.id ? 0 : 8)
+                ForEach(items, id: \.id) { timelineItem in
+                    GitHubTimelineRow(
+                        item: timelineItem,
+                        isLast: timelineItem.id == lastItemId,
+                        isSelected: configuration.selection.contains(timelineItem.id),
+                        onTap: configuration.onItemTap
+                    )
                 }
             }
             .padding()
         }
+    }
+}
+
+// MARK: - GitHub Timeline Row
+
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+private struct GitHubTimelineRow: View {
+    let item: AnyTimelineItemWrapper
+    let isLast: Bool
+    let isSelected: Bool
+    let onTap: ((AnyTimelineItemWrapper) -> Void)?
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            // Indicator column with connector
+            VStack(spacing: 0) {
+                TimelineIndicatorView(
+                    status: item.status,
+                    isSelected: isSelected
+                )
+                .environment(\.timelineIndicatorSize, 10)
+
+                if !isLast {
+                    TimelineConnectorView(isVertical: true)
+                        .frame(height: nil)
+                        .environment(\.timelineConnectorWidth, 1.5)
+                }
+            }
+
+            // Content
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    if let title = item.title {
+                        Text(title)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+
+                    Spacer()
+
+                    Text(item.date, style: .relative)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+
+                if let description = item.description {
+                    Text(description)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+
+                if let status = item.status {
+                    HStack(spacing: 4) {
+                        Image(systemName: status.defaultIcon)
+                            .font(.caption2)
+                        Text(status.displayName)
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(status.color)
+                }
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isSelected ? Color.blue.opacity(0.05) : Color.textBackground)
+            )
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onTap?(item)
+            }
+        }
+        .padding(.bottom, isLast ? 0 : 8)
     }
 }
 

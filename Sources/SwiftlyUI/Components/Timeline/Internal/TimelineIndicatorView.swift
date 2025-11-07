@@ -32,9 +32,26 @@ struct TimelineIndicatorView: View {
     var body: some View {
         ZStack {
             // Background shape
-            shapeView
-                .fill(indicatorColor)
-                .frame(width: size, height: size)
+            Group {
+                switch shape {
+                case .circle:
+                    Circle()
+                        .fill(indicatorColor)
+                case .roundedSquare(let cornerRadius):
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(indicatorColor)
+                case .square:
+                    Rectangle()
+                        .fill(indicatorColor)
+                case .diamond:
+                    DiamondShape()
+                        .fill(indicatorColor)
+                case .custom:
+                    Circle()
+                        .fill(indicatorColor)
+                }
+            }
+            .frame(width: size, height: size)
 
             // Icon overlay if available
             if let iconName = iconName {
@@ -45,32 +62,27 @@ struct TimelineIndicatorView: View {
 
             // Selection ring
             if isSelected {
-                shapeView
-                    .strokeBorder(indicatorColor, lineWidth: 2)
-                    .frame(width: size + 4, height: size + 4)
+                Group {
+                    switch shape {
+                    case .circle:
+                        Circle()
+                            .stroke(indicatorColor, lineWidth: 2)
+                    case .roundedSquare(let cornerRadius):
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .stroke(indicatorColor, lineWidth: 2)
+                    case .square:
+                        Rectangle()
+                            .stroke(indicatorColor, lineWidth: 2)
+                    case .diamond:
+                        DiamondShape()
+                            .stroke(indicatorColor, lineWidth: 2)
+                    case .custom:
+                        Circle()
+                            .stroke(indicatorColor, lineWidth: 2)
+                    }
+                }
+                .frame(width: size + 4, height: size + 4)
             }
-        }
-    }
-
-    // MARK: - Private Views
-
-    @ViewBuilder
-    private var shapeView: some Shape {
-        switch shape {
-        case .circle:
-            Circle()
-
-        case .roundedSquare(let cornerRadius):
-            RoundedRectangle(cornerRadius: cornerRadius)
-
-        case .square:
-            Rectangle()
-
-        case .diamond:
-            DiamondShape()
-
-        case .custom:
-            Circle() // Fallback for custom shapes
         }
     }
 }
