@@ -45,12 +45,18 @@ final class TimelineTests: XCTestCase {
     }
 
     func testTimelineItemHashable() {
-        let item1 = TimelineItem(id: UUID(), date: Date(), title: "Item 1")
-        let item2 = TimelineItem(id: item1.id, date: Date(), title: "Item 2")
-        let item3 = TimelineItem(date: Date(), title: "Item 3")
+        let date = Date()
+        let item1 = TimelineItem(id: UUID(), date: date, title: "Item 1", status: .completed)
+        let item2 = TimelineItem(id: item1.id, date: date, title: "Item 1", status: .completed)
+        let item3 = TimelineItem(date: date, title: "Item 3")
 
-        XCTAssertEqual(item1, item2) // Same ID
+        // Hashable includes all properties, so items with same ID but different properties are not equal
+        XCTAssertEqual(item1, item2) // Same ID and same properties
         XCTAssertNotEqual(item1, item3) // Different ID
+
+        // Test that items can be used in Sets (Hashable requirement)
+        let set: Set<TimelineItem> = [item1, item2, item3]
+        XCTAssertEqual(set.count, 2) // item1 and item2 are equal, so set has 2 unique items
     }
 
     // MARK: - TimelineStatus Tests
@@ -323,5 +329,171 @@ final class TimelineTests: XCTestCase {
         Task {
             let _ = status // Should compile without warnings
         }
+    }
+
+    // MARK: - Branch Detection Tests
+
+    func testTimelineItemWithParentIds() {
+        let parent = TimelineItem(date: Date(), title: "Parent")
+        let child = TimelineItem(
+            date: Date().addingTimeInterval(100),
+            title: "Child",
+            parentIds: [parent.id]
+        )
+
+        XCTAssertNotNil(child.parentIds)
+        XCTAssertEqual(child.parentIds?.count, 1)
+        XCTAssertEqual(child.parentIds?.first, parent.id)
+        XCTAssertEqual(child.timelineParentIds?.first, AnyHashable(parent.id))
+    }
+
+    func testTimelineItemWithParentConvenienceMethod() {
+        let parent = TimelineItem(date: Date(), title: "Parent")
+        let child = TimelineItem(date: Date(), title: "Child")
+            .withParent(parent.id)
+
+        XCTAssertEqual(child.parentIds?.count, 1)
+        XCTAssertEqual(child.parentIds?.first, parent.id)
+    }
+
+    func testTimelineItemWithMultipleParents() {
+        let parent1 = TimelineItem(date: Date(), title: "Parent 1")
+        let parent2 = TimelineItem(date: Date(), title: "Parent 2")
+        let merge = TimelineItem(date: Date(), title: "Merge")
+            .withParents([parent1.id, parent2.id])
+
+        XCTAssertEqual(merge.parentIds?.count, 2)
+        XCTAssertTrue(merge.parentIds?.contains(parent1.id) == true)
+        XCTAssertTrue(merge.parentIds?.contains(parent2.id) == true)
+    }
+
+    func testBranchAnalyzerNoParents() {
+        // Simple linear timeline with no parent relationships
+        let item1 = TimelineItem(date: Date(), title: "Item 1")
+        let item2 = TimelineItem(date: Date().addingTimeInterval(100), title: "Item 2")
+
+        let wrappers = [item1, item2].map { AnyTimelineItemWrapper($0) }
+        let layout = BranchAnalyzer.analyze(items: wrappers)
+
+        XCTAssertEqual(layout.laneCount, 1)
+        XCTAssertEqual(layout.itemLanes.count, 2)
+        XCTAssertEqual(layout.itemLanes[AnyHashable(item1.id)], 0)
+        XCTAssertEqual(layout.itemLanes[AnyHashable(item2.id)], 0)
+        XCTAssertTrue(layout.branchPoints.isEmpty)
+    }
+
+    func testBranchAnalyzerLinearHistory() {
+        // Linear history with parent relationships
+        let commit1 = TimelineItem(date: Date(), title: "Commit 1")
+        let commit2 = TimelineItem(
+            date: Date().addingTimeInterval(100),
+            title: "Commit 2"
+        ).withParent(commit1.id)
+        let commit3 = TimelineItem(
+            date: Date().addingTimeInterval(200),
+            title: "Commit 3"
+        ).withParent(commit2.id)
+
+        let wrappers = [commit1, commit2, commit3].map { AnyTimelineItemWrapper($0) }
+        let layout = BranchAnalyzer.analyze(items: wrappers)
+
+        XCTAssertEqual(layout.laneCount, 1, "Linear history should use 1 lane")
+        XCTAssertEqual(layout.itemLanes[AnyHashable(commit1.id)], 0)
+        XCTAssertEqual(layout.itemLanes[AnyHashable(commit2.id)], 0)
+        XCTAssertEqual(layout.itemLanes[AnyHashable(commit3.id)], 0)
+        XCTAssertTrue(layout.branchPoints.isEmpty, "No branch operations in linear history")
+    }
+
+    func testBranchAnalyzerBranchCreation() {
+        // Main branch with feature branch diverging
+        let commit1 = TimelineItem(date: Date(), title: "Initial commit")
+        let mainCommit = TimelineItem(
+            date: Date().addingTimeInterval(100),
+            title: "Main work"
+        ).withParent(commit1.id)
+        let featureCommit = TimelineItem(
+            date: Date().addingTimeInterval(150),
+            title: "Feature work"
+        ).withParent(commit1.id)
+
+        let wrappers = [commit1, mainCommit, featureCommit].map { AnyTimelineItemWrapper($0) }
+        let layout = BranchAnalyzer.analyze(items: wrappers)
+
+        XCTAssertEqual(layout.laneCount, 2, "Should have 2 lanes (main + feature)")
+        XCTAssertEqual(layout.itemLanes[AnyHashable(commit1.id)], 0)
+        XCTAssertEqual(layout.itemLanes[AnyHashable(mainCommit.id)], 0, "First child stays in parent lane")
+
+        let featureLane = layout.itemLanes[AnyHashable(featureCommit.id)]
+        XCTAssertNotNil(featureLane)
+        XCTAssertNotEqual(featureLane, 0, "Feature branch should be in different lane")
+
+        // Check for branch creation point
+        let branchCreations = layout.branchPoints.filter { $0.type == .create }
+        XCTAssertEqual(branchCreations.count, 1, "Should have 1 branch creation")
+        XCTAssertEqual(branchCreations.first?.itemId, AnyHashable(featureCommit.id))
+    }
+
+    func testBranchAnalyzerMerge() {
+        // Two branches merging
+        let commit1 = TimelineItem(date: Date(), title: "Initial")
+        let main2 = TimelineItem(
+            date: Date().addingTimeInterval(100),
+            title: "Main 2"
+        ).withParent(commit1.id)
+        let feature = TimelineItem(
+            date: Date().addingTimeInterval(150),
+            title: "Feature"
+        ).withParent(commit1.id)
+        let merge = TimelineItem(
+            date: Date().addingTimeInterval(200),
+            title: "Merge"
+        ).withParents([main2.id, feature.id])
+
+        let wrappers = [commit1, main2, feature, merge].map { AnyTimelineItemWrapper($0) }
+        let layout = BranchAnalyzer.analyze(items: wrappers)
+
+        XCTAssertGreaterThanOrEqual(layout.laneCount, 2, "Should have at least 2 lanes")
+
+        // Check for merge point
+        let mergePoints = layout.branchPoints.filter { $0.type == .merge }
+        XCTAssertGreaterThan(mergePoints.count, 0, "Should have merge point(s)")
+
+        // Verify merge target item
+        let mergePointsForMergeCommit = mergePoints.filter { $0.itemId == AnyHashable(merge.id) }
+        XCTAssertGreaterThan(mergePointsForMergeCommit.count, 0, "Merge commit should have branch points")
+    }
+
+    func testBranchAnalyzerComplexGraph() {
+        // Complex branching with multiple branches and merges
+        let c1 = TimelineItem(date: Date(), title: "C1")
+        let c2 = TimelineItem(date: Date().addingTimeInterval(100), title: "C2").withParent(c1.id)
+        let c3 = TimelineItem(date: Date().addingTimeInterval(150), title: "C3").withParent(c1.id)
+        let c4 = TimelineItem(date: Date().addingTimeInterval(200), title: "C4").withParent(c2.id)
+        let c5 = TimelineItem(date: Date().addingTimeInterval(250), title: "C5").withParent(c3.id)
+        let c6 = TimelineItem(date: Date().addingTimeInterval(300), title: "C6").withParents([c4.id, c5.id])
+
+        let wrappers = [c1, c2, c3, c4, c5, c6].map { AnyTimelineItemWrapper($0) }
+        let layout = BranchAnalyzer.analyze(items: wrappers)
+
+        // Should have multiple lanes for parallel development
+        XCTAssertGreaterThanOrEqual(layout.laneCount, 2)
+
+        // All items should be assigned to lanes
+        XCTAssertEqual(layout.itemLanes.count, 6)
+
+        // Should have both branch creations and merges
+        XCTAssertGreaterThan(layout.branchPoints.count, 0)
+    }
+
+    func testBranchAnalyzerParentMap() {
+        let commit1 = TimelineItem(date: Date(), title: "C1")
+        let commit2 = TimelineItem(date: Date(), title: "C2").withParent(commit1.id)
+
+        let wrappers = [commit1, commit2].map { AnyTimelineItemWrapper($0) }
+        let layout = BranchAnalyzer.analyze(items: wrappers)
+
+        XCTAssertEqual(layout.parentMap.count, 1)
+        XCTAssertEqual(layout.parentMap[AnyHashable(commit2.id)]?.count, 1)
+        XCTAssertEqual(layout.parentMap[AnyHashable(commit2.id)]?.first, AnyHashable(commit1.id))
     }
 }
