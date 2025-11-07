@@ -69,6 +69,7 @@ public struct AnyTimelineItemWrapper: Identifiable, Hashable {
     public let title: String?
     public let description: String?
     public let status: TimelineStatus?
+    public let parentIds: [AnyHashable]?
 
     public init<Item: TimelineItemRepresentable>(_ item: Item) {
         self.id = AnyHashable(item.id)
@@ -76,6 +77,7 @@ public struct AnyTimelineItemWrapper: Identifiable, Hashable {
         self.title = item.timelineTitle
         self.description = item.timelineDescription
         self.status = item.timelineStatus
+        self.parentIds = item.timelineParentIds
     }
 
     public static func == (lhs: AnyTimelineItemWrapper, rhs: AnyTimelineItemWrapper) -> Bool {

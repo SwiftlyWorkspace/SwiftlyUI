@@ -45,6 +45,13 @@ public struct TimelineItem: Identifiable, Hashable, Sendable {
     /// An optional status for the timeline item.
     public var status: TimelineStatus?
 
+    /// The IDs of parent timeline items, enabling branch visualization.
+    ///
+    /// When parent IDs are provided, timeline styles that support branching
+    /// (like the GitHub style) will automatically detect and visualize branch
+    /// relationships, merges, and splits.
+    public var parentIds: [UUID]?
+
     // MARK: - Initializers
 
     /// Creates a new timeline item with the specified properties.
@@ -55,18 +62,21 @@ public struct TimelineItem: Identifiable, Hashable, Sendable {
     ///   - title: An optional title for display.
     ///   - description: An optional description providing additional context.
     ///   - status: An optional status indicating the item's state.
+    ///   - parentIds: Optional array of parent item IDs for branch visualization.
     public init(
         id: UUID = UUID(),
         date: Date,
         title: String? = nil,
         description: String? = nil,
-        status: TimelineStatus? = nil
+        status: TimelineStatus? = nil,
+        parentIds: [UUID]? = nil
     ) {
         self.id = id
         self.date = date
         self.title = title
         self.description = description
         self.status = status
+        self.parentIds = parentIds
     }
 }
 
@@ -78,6 +88,9 @@ extension TimelineItem: TimelineItemRepresentable {
     public var timelineTitle: String? { title }
     public var timelineDescription: String? { description }
     public var timelineStatus: TimelineStatus? { status }
+    public var timelineParentIds: [AnyHashable]? {
+        parentIds?.map { AnyHashable($0) }
+    }
 }
 
 // MARK: - Convenience Factory Methods
@@ -127,5 +140,54 @@ public extension TimelineItem {
         description: String? = nil
     ) -> TimelineItem {
         TimelineItem(date: date, title: title, description: description, status: .pending)
+    }
+
+    /// Returns a copy of this item with a single parent ID set.
+    ///
+    /// This creates a linear chain from the parent item to this item.
+    ///
+    /// - Parameter parentId: The ID of the parent timeline item.
+    /// - Returns: A new timeline item with the specified parent.
+    ///
+    /// ## Example
+    /// ```swift
+    /// let commit1 = TimelineItem(date: date1, title: "Initial commit")
+    /// let commit2 = TimelineItem(date: date2, title: "Second commit")
+    ///     .withParent(commit1.id)
+    /// ```
+    func withParent(_ parentId: UUID) -> TimelineItem {
+        TimelineItem(
+            id: id,
+            date: date,
+            title: title,
+            description: description,
+            status: status,
+            parentIds: [parentId]
+        )
+    }
+
+    /// Returns a copy of this item with multiple parent IDs set.
+    ///
+    /// This creates a merge point where multiple branches converge into this item.
+    ///
+    /// - Parameter parentIds: The IDs of the parent timeline items.
+    /// - Returns: A new timeline item with the specified parents.
+    ///
+    /// ## Example
+    /// ```swift
+    /// let mainCommit = TimelineItem(date: date1, title: "Main work")
+    /// let featureCommit = TimelineItem(date: date2, title: "Feature work")
+    /// let mergeCommit = TimelineItem(date: date3, title: "Merge feature")
+    ///     .withParents([mainCommit.id, featureCommit.id])
+    /// ```
+    func withParents(_ parentIds: [UUID]) -> TimelineItem {
+        TimelineItem(
+            id: id,
+            date: date,
+            title: title,
+            description: description,
+            status: status,
+            parentIds: parentIds
+        )
     }
 }
