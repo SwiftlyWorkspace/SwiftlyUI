@@ -1,89 +1,7 @@
 import SwiftUI
 
-/// A custom layout for GitHub-style branching timeline visualization.
-///
-/// This layout analyzes timeline items to detect branch relationships, then positions
-/// items in horizontal lanes with branch and merge visualization using curved connectors.
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
-struct GitHubBranchingLayout: Layout {
-    // MARK: - Properties
-
-    let items: [AnyTimelineItemWrapper]
-    let laneWidth: CGFloat
-    let itemSpacing: CGFloat
-
-    init(items: [AnyTimelineItemWrapper], laneWidth: CGFloat = 60, itemSpacing: CGFloat = 80) {
-        self.items = items
-        self.laneWidth = laneWidth
-        self.itemSpacing = itemSpacing
-    }
-
-    // MARK: - Layout Protocol
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout LayoutCache) -> CGSize {
-        let layout = cache.branchLayout
-        let totalWidth = CGFloat(layout.laneCount) * laneWidth
-        let totalHeight = CGFloat(items.count) * itemSpacing
-
-        return CGSize(width: totalWidth, height: totalHeight)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout LayoutCache) {
-        let itemPositions = cache.itemPositions
-
-        // Place each item in its assigned lane
-        for (index, subview) in subviews.enumerated() {
-            guard index < items.count else { continue }
-
-            let item = items[index]
-            guard let position = itemPositions[item.id] else { continue }
-
-            let size = subview.sizeThatFits(proposal)
-            subview.place(
-                at: CGPoint(
-                    x: bounds.minX + position.x,
-                    y: bounds.minY + position.y
-                ),
-                anchor: .center,
-                proposal: ProposedViewSize(width: size.width, height: size.height)
-            )
-        }
-    }
-
-    func makeCache(subviews: Subviews) -> LayoutCache {
-        let branchLayout = BranchAnalyzer.analyze(items: items)
-
-        // Calculate positions for all items
-        var itemPositions: [AnyHashable: CGPoint] = [:]
-
-        for (index, item) in items.enumerated() {
-            guard let lane = branchLayout.itemLanes[item.id] else { continue }
-
-            let x = CGFloat(lane) * laneWidth + laneWidth / 2
-            let y = CGFloat(index) * itemSpacing + itemSpacing / 2
-
-            itemPositions[item.id] = CGPoint(x: x, y: y)
-        }
-
-        return LayoutCache(
-            branchLayout: branchLayout,
-            itemPositions: itemPositions,
-            laneWidth: laneWidth,
-            itemSpacing: itemSpacing
-        )
-    }
-
-    // MARK: - Layout Cache
-
-    struct LayoutCache {
-        let branchLayout: BranchLayout
-        let itemPositions: [AnyHashable: CGPoint]
-        let laneWidth: CGFloat
-        let itemSpacing: CGFloat
-    }
-}
-
-/// Container view that combines GitHubBranchingLayout with connectors and indicators.
+/// Container view for Git-style branching timeline.
+/// Shows branch graph on left, items in chronological column on right.
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 struct GitHubBranchingContainer<Content: View>: View {
     // MARK: - Properties
@@ -97,110 +15,253 @@ struct GitHubBranchingContainer<Content: View>: View {
     @Environment(\.timelineConnectorColor) private var connectorColor
     @Environment(\.timelineConnectorWidth) private var connectorWidth
 
-    // MARK: - Private State
-
-    @State private var branchLayout: BranchLayout?
-    @State private var itemPositions: [AnyHashable: CGPoint] = [:]
-
     // MARK: - Body
 
     var body: some View {
+        let branchLayout = BranchAnalyzer.analyze(items: items)
+        let graphWidth = CGFloat(branchLayout.laneCount) * laneWidth
+
+        let _ = debugPrintLayout(branchLayout)
+
         ScrollView {
-            ZStack(alignment: .topLeading) {
-                // Layer 1: Connectors (background)
-                if let layout = branchLayout {
-                    connectorLayer(layout: layout)
-                }
+            VStack(spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    HStack(alignment: .center, spacing: 16) {
+                        // LEFT: Branch graph visualization
+                        branchGraphView(
+                            for: item,
+                            index: index,
+                            layout: branchLayout,
+                            graphWidth: graphWidth
+                        )
+                        .frame(width: graphWidth, height: itemSpacing)
 
-                // Layer 2: Branch indicators (mid-layer)
-                if let layout = branchLayout {
-                    branchIndicatorLayer(layout: layout)
-                }
-
-                // Layer 3: Item cards (foreground)
-                GitHubBranchingLayout(
-                    items: items,
-                    laneWidth: laneWidth,
-                    itemSpacing: itemSpacing
-                ) {
-                    ForEach(items, id: \.id) { item in
+                        // RIGHT: Timeline item content (single column)
                         content(item)
-                            .frame(minWidth: laneWidth * 0.9)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .frame(height: itemSpacing)
                 }
             }
             .padding()
-            .onAppear {
-                analyzeBranches()
-            }
         }
     }
 
     // MARK: - Private Views
 
-    /// Renders all connector lines between items.
-    private func connectorLayer(layout: BranchLayout) -> some View {
-        ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-            if let parents = layout.parentMap[item.id],
-               !parents.isEmpty,
-               let toPosition = itemPositions[item.id] {
+    /// Debug helper to print lane assignments and line drawing decisions
+    private func debugPrintLayout(_ layout: BranchLayout) {
+        print("\n=== BRANCH LAYOUT DEBUG ===")
+        print("Total lanes: \(layout.laneCount)")
+        for (index, item) in items.enumerated() {
+            let lane = layout.itemLanes[item.id] ?? -1
+            let parents = layout.parentMap[item.id] ?? []
+            let reachTo = reachIndex(for: index, itemId: item.id, lane: lane, layout: layout)
+            print("\n[\(index)] Lane \(lane): '\(item.title ?? "No title")'")
+            print("  Reaches to index: \(reachTo)")
+            print("  Parents: \(parents.count)")
 
-                ForEach(Array(parents.enumerated()), id: \.offset) { _, parentId in
-                    if let fromPosition = itemPositions[parentId] {
-                        connectorView(from: fromPosition, to: toPosition, layout: layout)
+            // Debug which lanes are active at this row
+            for checkLane in 0..<layout.laneCount {
+                let isActive = isLaneActiveAt(index: index, lane: checkLane, layout: layout)
+                if isActive {
+                    print("  Lane \(checkLane) active: \(isActive)")
+
+                    if checkLane != lane {
+                        // Check if we would draw pass-through
+                        let laneEndsAtMerge = layout.parentMap[item.id]?.contains { parentId in
+                            guard layout.itemLanes[parentId] == checkLane else { return false }
+                            let parentContinues = items.enumerated().contains { nextIndex, nextItem in
+                                nextIndex > index &&
+                                layout.itemLanes[nextItem.id] == checkLane &&
+                                (layout.parentMap[nextItem.id]?.contains(parentId) ?? false)
+                            }
+                            return !parentContinues
+                        } ?? false
+
+                        print("    Will draw pass-through: \(!laneEndsAtMerge) (laneEndsAtMerge: \(laneEndsAtMerge))")
                     }
                 }
             }
         }
+        print("\n=========================\n")
     }
 
-    /// Renders a single connector between two items.
-    private func connectorView(from: CGPoint, to: CGPoint, layout: BranchLayout) -> some View {
-        let connectorType: BranchConnectorType
-
-        if abs(from.x - to.x) < 1 {
-            // Same lane: straight line
-            connectorType = .straight(from: from, to: to)
-        } else if from.x < to.x {
-            // Moving right: branch creation
-            connectorType = .curveRight(from: from, to: to)
-        } else {
-            // Moving left: branch merge
-            connectorType = .curveLeft(from: from, to: to)
+    /// Check if a lane is active at a specific row (should have a line drawn)
+    /// A lane is active in segments between items and their merges/next items
+    private func isLaneActiveAt(index: Int, lane: Int, layout: BranchLayout) -> Bool {
+        // Find all items on this lane at or before this index
+        let previousItemsOnLane = items.enumerated().compactMap { itemIndex, item in
+            layout.itemLanes[item.id] == lane && itemIndex <= index ? (itemIndex, item) : nil
         }
 
-        return BranchConnectorView(connectorType: connectorType)
+        guard let (lastItemIndex, lastItem) = previousItemsOnLane.last else {
+            return false
+        }
+
+        // If this IS the item's row, it's active
+        if lastItemIndex == index {
+            return true
+        }
+
+        // Find where this item's line should extend to
+        let reachToIndex = reachIndex(for: lastItemIndex, itemId: lastItem.id, lane: lane, layout: layout)
+
+        // Lane is active if current index is between the item and where it reaches
+        return index <= reachToIndex
     }
 
-    /// Renders branch indicators at branch/merge points.
-    private func branchIndicatorLayer(layout: BranchLayout) -> some View {
-        ForEach(layout.branchPoints, id: \.itemId) { branchPoint in
-            if let position = itemPositions[branchPoint.itemId] {
-                BranchIndicatorView(branchPoint: branchPoint)
-                    .position(x: position.x, y: position.y - 20) // Slightly above the item
+    /// Compute where an item's line should reach to
+    /// Returns the index of the next item on same lane, or the merge point, whichever comes first
+    private func reachIndex(for itemIndex: Int, itemId: AnyHashable, lane: Int, layout: BranchLayout) -> Int {
+        // Find next item on the same lane that is actually a direct child
+        let nextItemOnLane = items.enumerated().first { nextIndex, nextItem in
+            guard nextIndex > itemIndex && layout.itemLanes[nextItem.id] == lane else {
+                return false
             }
+            // Only consider it a continuation if this item is a parent of the next item
+            return layout.parentMap[nextItem.id]?.contains(itemId) ?? false
+        }
+
+        // Find first child that merges (is on a different lane)
+        let mergePoint = items.enumerated().first { childIndex, childItem in
+            childIndex > itemIndex &&
+            layout.itemLanes[childItem.id] != lane &&
+            (layout.parentMap[childItem.id]?.contains(itemId) ?? false)
+        }
+
+        // Return whichever comes first
+        if let nextOnLane = nextItemOnLane?.0, let merge = mergePoint?.0 {
+            return min(nextOnLane, merge)
+        } else if let nextOnLane = nextItemOnLane?.0 {
+            return nextOnLane
+        } else if let merge = mergePoint?.0 {
+            return merge
+        } else {
+            return itemIndex  // No continuation, end at this item
         }
     }
 
-    // MARK: - Private Methods
+    /// Renders the branch graph (lanes, connectors, indicator) for one item.
+    @ViewBuilder
+    private func branchGraphView(
+        for item: AnyTimelineItemWrapper,
+        index: Int,
+        layout: BranchLayout,
+        graphWidth: CGFloat
+    ) -> some View {
+        let itemLane = layout.itemLanes[item.id] ?? 0
+        let indicatorX = CGFloat(itemLane) * laneWidth + laneWidth / 2
+        let centerY = itemSpacing / 2
 
-    /// Analyzes items to detect branch structure and calculate positions.
-    private func analyzeBranches() {
-        let layout = BranchAnalyzer.analyze(items: items)
-        self.branchLayout = layout
+        ZStack(alignment: .topLeading) {
+            // Draw lines for all lanes
+            ForEach(0..<layout.laneCount, id: \.self) { lane in
+                let laneX = CGFloat(lane) * laneWidth + laneWidth / 2
 
-        // Calculate positions
-        var positions: [AnyHashable: CGPoint] = [:]
+                // Check if this lane is active at this row
+                if isLaneActiveAt(index: index, lane: lane, layout: layout) {
+                    if lane == itemLane {
+                        // This is the current item's lane
+                        Group {
+                            // Draw connectors from parents to this item
+                            if let parents = layout.parentMap[item.id], !parents.isEmpty {
+                                ForEach(Array(parents.enumerated()), id: \.offset) { _, parentId in
+                                    if let _ = items.firstIndex(where: { $0.id == parentId }),
+                                       let parentLane = layout.itemLanes[parentId] {
+                                        let parentX = CGFloat(parentLane) * laneWidth + laneWidth / 2
 
-        for (index, item) in items.enumerated() {
-            guard let lane = layout.itemLanes[item.id] else { continue }
+                                        let _ = print("[\(index)] Drawing connector from parent lane \(parentLane) to item lane \(itemLane) for '\(item.title ?? "")'")
 
-            let x = CGFloat(lane) * laneWidth + laneWidth / 2
-            let y = CGFloat(index) * itemSpacing + itemSpacing / 2
+                                        connectorPath(
+                                            from: CGPoint(x: parentX, y: 0),
+                                            to: CGPoint(x: laneX, y: centerY),
+                                            sameLane: parentLane == itemLane
+                                        )
+                                    }
+                                }
+                            }
 
-            positions[item.id] = CGPoint(x: x, y: y)
+                            // Draw line from item to bottom (if lane continues to next row)
+                            let continuesBelow = index < items.count - 1 && isLaneActiveAt(index: index + 1, lane: lane, layout: layout)
+                            let _ = print("[\(index)] Item lane \(lane) continues below: \(continuesBelow)")
+                            if continuesBelow {
+                                Path { path in
+                                    path.move(to: CGPoint(x: laneX, y: centerY))
+                                    path.addLine(to: CGPoint(x: laneX, y: itemSpacing))
+                                }
+                                .stroke(connectorColor, lineWidth: connectorWidth)
+                            }
+                        }
+                    } else {
+                        // This is a different lane - check if we should draw a pass-through line
+
+                        // Check if this lane continues below
+                        let continuesBelow = index < items.count - 1 && isLaneActiveAt(index: index + 1, lane: lane, layout: layout)
+
+                        // Check if this lane is merging into the current item AND not continuing
+                        // (if it's continuing, it's a branch point, not a merge endpoint)
+                        let isMergingAndEnding = layout.parentMap[item.id]?.contains { parentId in
+                            layout.itemLanes[parentId] == lane
+                        } ?? false && !continuesBelow
+
+                        let _ = print("[\(index)] Pass-through lane \(lane): isMergingAndEnding=\(isMergingAndEnding), continuesBelow=\(continuesBelow)")
+
+                        // Don't draw pass-through if merging and ending here (merge connector handles it)
+                        if !isMergingAndEnding {
+                            let _ = print("[\(index)] Drawing pass-through on lane \(lane)")
+
+                            Path { path in
+                                path.move(to: CGPoint(x: laneX, y: 0))
+                                if continuesBelow {
+                                    // Lane continues below - draw full line
+                                    path.addLine(to: CGPoint(x: laneX, y: itemSpacing))
+                                } else {
+                                    // Lane ends here - draw to center
+                                    path.addLine(to: CGPoint(x: laneX, y: centerY))
+                                }
+                            }
+                            .stroke(connectorColor, lineWidth: connectorWidth)
+                        } else {
+                            let _ = print("[\(index)] Skipping pass-through on lane \(lane) because it's merging and ending here")
+                        }
+                    }
+                }
+            }
+
+            // Draw indicator at center
+            TimelineIndicatorView(
+                status: item.status,
+                isSelected: selection.contains(item.id)
+            )
+            .environment(\.timelineIndicatorSize, 12)
+            .position(x: indicatorX, y: centerY)
         }
+        .frame(width: graphWidth, height: itemSpacing)
+    }
 
-        self.itemPositions = positions
+    /// Creates a path from parent to child item.
+    @ViewBuilder
+    private func connectorPath(from: CGPoint, to: CGPoint, sameLane: Bool) -> some View {
+        if sameLane {
+            // Straight vertical line
+            Path { path in
+                path.move(to: from)
+                path.addLine(to: to)
+            }
+            .stroke(connectorColor, lineWidth: connectorWidth)
+        } else {
+            // Curved line for branch/merge
+            Path { path in
+                path.move(to: from)
+
+                let midY = (from.y + to.y) / 2
+                let control1 = CGPoint(x: from.x, y: midY)
+                let control2 = CGPoint(x: to.x, y: midY)
+
+                path.addCurve(to: to, control1: control1, control2: control2)
+            }
+            .stroke(connectorColor, lineWidth: connectorWidth)
+        }
     }
 }

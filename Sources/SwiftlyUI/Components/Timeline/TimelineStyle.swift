@@ -334,8 +334,8 @@ public struct GitHubTimelineStyle: TimelineStyle {
         GitHubBranchingContainer(
             items: configuration.items,
             selection: configuration.selection,
-            laneWidth: 200,
-            itemSpacing: 100
+            laneWidth: 30,  // Narrow lanes for branch graph
+            itemSpacing: 80
         ) { item in
             GitHubBranchCard(
                 item: item,
@@ -348,7 +348,7 @@ public struct GitHubTimelineStyle: TimelineStyle {
 
 // MARK: - GitHub Branch Card
 
-/// Card view for items in branching layout.
+/// Card view for items in branching layout (single column on right).
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 private struct GitHubBranchCard: View {
     let item: AnyTimelineItemWrapper
@@ -356,34 +356,42 @@ private struct GitHubBranchCard: View {
     let onTap: ((AnyTimelineItemWrapper) -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // Title and date
-            VStack(alignment: .leading, spacing: 4) {
-                if let title = item.title {
-                    Text(title)
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .lineLimit(2)
-                }
+        VStack(alignment: .leading, spacing: 8) {
+            // Title
+            if let title = item.title {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .lineLimit(2)
+            }
 
+            // Description
+            if let description = item.description {
+                Text(description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+
+            // Bottom row: date and status
+            HStack(spacing: 12) {
                 Text(item.date, style: .relative)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
+                    .foregroundStyle(.tertiary)
 
-            // Status badge
-            if let status = item.status {
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(status.color)
-                        .frame(width: 6, height: 6)
-                    Text(status.displayName)
-                        .font(.caption2)
+                if let status = item.status {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(status.color)
+                            .frame(width: 6, height: 6)
+                        Text(status.displayName)
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(status.color)
                 }
-                .foregroundStyle(status.color)
             }
         }
-        .padding(10)
+        .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 8)

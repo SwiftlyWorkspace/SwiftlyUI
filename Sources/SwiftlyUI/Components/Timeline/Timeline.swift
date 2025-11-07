@@ -379,19 +379,19 @@ public struct DefaultTimelineItemContent<Item: TimelineItemRepresentable>: View 
             parentIds: [commit1Id]
         ),
         TimelineItem(
-            id: featureBranch1Id,
-            date: Date().addingTimeInterval(-7000),
-            title: "Feature: Dark mode",
-            description: "Start implementing dark mode support",
-            status: .inProgress,
-            parentIds: [commit1Id]
-        ),
-        TimelineItem(
             id: commit3Id,
-            date: Date().addingTimeInterval(-6000),
+            date: Date().addingTimeInterval(-7000),
             title: "Fix auth bug",
             description: "Resolve token expiration issue",
             status: .completed,
+            parentIds: [commit2Id]
+        ),
+        TimelineItem(
+            id: featureBranch1Id,
+            date: Date().addingTimeInterval(-6000),
+            title: "Feature: Dark mode",
+            description: "Start implementing dark mode support",
+            status: .inProgress,
             parentIds: [commit2Id]
         ),
         TimelineItem(
@@ -424,5 +424,173 @@ public struct DefaultTimelineItemContent<Item: TimelineItemRepresentable>: View 
         Timeline(items: items)
             .timelineStyle(.github)
             .navigationTitle("Git History")
+    }
+}
+
+#Preview("Complex Branching Timeline (50 items, 5 levels)") {
+    // Create a complex Git-style history with 50 items across 5 branch levels
+    func createComplexHistory() -> [TimelineItem] {
+        let baseTime = Date().addingTimeInterval(-100000)
+        var items: [TimelineItem] = []
+        var commitIds: [Int: UUID] = [:]  // Store commit IDs by index
+
+        // Helper to create commit
+        func commit(_ index: Int, _ title: String, _ description: String, _ status: TimelineStatus, parents: [Int]) -> TimelineItem {
+            let id = UUID()
+            commitIds[index] = id
+            let parentIds = parents.compactMap { commitIds[$0] }
+            return TimelineItem(
+                id: id,
+                date: baseTime.addingTimeInterval(Double(index) * 2000),
+                title: title,
+                description: description,
+                status: status,
+                parentIds: parentIds.isEmpty ? nil : parentIds
+            )
+        }
+
+        // Main branch and multiple feature branches
+        items.append(commit(0, "Initial commit", "Project setup and structure", .completed, parents: []))
+        items.append(commit(1, "Add core framework", "Implement base architecture", .completed, parents: [0]))
+        items.append(commit(2, "Setup CI/CD", "Configure GitHub Actions", .completed, parents: [1]))
+
+        // Feature branch 1: Authentication (lane 1)
+        items.append(commit(3, "Start auth feature", "Begin authentication implementation", .completed, parents: [2]))
+
+        // Continue main
+        items.append(commit(4, "Update dependencies", "Bump library versions", .completed, parents: [2]))
+
+        // Continue auth branch
+        items.append(commit(5, "Add login endpoint", "Implement user login API", .completed, parents: [3]))
+        items.append(commit(6, "Add registration", "User signup functionality", .completed, parents: [5]))
+
+        // Feature branch 2: UI Components (lane 2)
+        items.append(commit(7, "Start UI library", "Begin component library", .inProgress, parents: [4]))
+
+        // Continue auth
+        items.append(commit(8, "Add password reset", "Forgot password feature", .completed, parents: [6]))
+
+        // Continue main
+        items.append(commit(9, "Fix build warnings", "Clean up compiler warnings", .completed, parents: [4]))
+
+        // Continue UI branch
+        items.append(commit(10, "Add button components", "Reusable button styles", .completed, parents: [7]))
+
+        // Merge auth to main
+        items.append(commit(11, "Merge: Authentication", "Merge auth feature into main", .completed, parents: [9, 8]))
+
+        // Feature branch 3: Database (lane 1, reusing lane)
+        items.append(commit(12, "Start database layer", "Setup database models", .completed, parents: [11]))
+
+        // Continue UI branch
+        items.append(commit(13, "Add form components", "Input fields and validation", .completed, parents: [10]))
+
+        // Sub-feature from UI: Theming (lane 3)
+        items.append(commit(14, "Start theming system", "Dark/light mode support", .inProgress, parents: [13]))
+
+        // Continue database
+        items.append(commit(15, "Add migrations", "Database schema versioning", .completed, parents: [12]))
+        items.append(commit(16, "Add seed data", "Initial test data", .completed, parents: [15]))
+
+        // Continue main
+        items.append(commit(17, "Update README", "Improve documentation", .completed, parents: [11]))
+
+        // Continue UI branch
+        items.append(commit(18, "Add modal components", "Dialog and sheet views", .completed, parents: [13]))
+
+        // Continue theming
+        items.append(commit(19, "Implement color tokens", "Design system colors", .completed, parents: [14]))
+        items.append(commit(20, "Add theme switcher", "Toggle dark/light mode", .completed, parents: [19]))
+
+        // Merge database to main
+        items.append(commit(21, "Merge: Database layer", "Integrate database with main", .completed, parents: [17, 16]))
+
+        // Feature branch 4: API Integration (lane 1)
+        items.append(commit(22, "Start API client", "REST API client library", .completed, parents: [21]))
+
+        // Continue UI
+        items.append(commit(23, "Add navigation", "Routing and nav components", .completed, parents: [18]))
+
+        // Continue theming
+        items.append(commit(24, "Add animations", "Theme transition effects", .completed, parents: [20]))
+
+        // Continue API
+        items.append(commit(25, "Add error handling", "API error middleware", .completed, parents: [22]))
+        items.append(commit(26, "Add retry logic", "Automatic retry on failure", .completed, parents: [25]))
+
+        // Continue main
+        items.append(commit(27, "Security audit", "Fix security vulnerabilities", .review, parents: [21]))
+
+        // Merge theming to UI branch
+        items.append(commit(28, "Merge: Theming", "Integrate theming into UI lib", .completed, parents: [23, 24]))
+
+        // Feature branch 5: Testing (lane 2)
+        items.append(commit(29, "Start test suite", "Setup testing framework", .inProgress, parents: [27]))
+
+        // Continue API
+        items.append(commit(30, "Add caching", "Response cache layer", .completed, parents: [26]))
+
+        // Continue UI
+        items.append(commit(31, "Add accessibility", "ARIA labels and keyboard nav", .completed, parents: [28]))
+
+        // Sub-feature from API: WebSocket (lane 3)
+        items.append(commit(32, "Start WebSocket", "Real-time communication", .inProgress, parents: [30]))
+
+        // Continue testing
+        items.append(commit(33, "Add unit tests", "Core functionality tests", .completed, parents: [29]))
+        items.append(commit(34, "Add integration tests", "API integration tests", .completed, parents: [33]))
+
+        // Continue main
+        items.append(commit(35, "Performance tuning", "Optimize critical paths", .completed, parents: [27]))
+
+        // Merge API to main
+        items.append(commit(36, "Merge: API client", "Integrate API client", .completed, parents: [35, 30]))
+
+        // Continue WebSocket
+        items.append(commit(37, "Add reconnection", "Auto-reconnect on disconnect", .completed, parents: [32]))
+        items.append(commit(38, "Add heartbeat", "Keep-alive mechanism", .completed, parents: [37]))
+
+        // Continue UI
+        items.append(commit(39, "Add loading states", "Skeleton screens", .completed, parents: [31]))
+
+        // Continue testing
+        items.append(commit(40, "Add E2E tests", "End-to-end test suite", .completed, parents: [34]))
+
+        // Deep feature from WebSocket: Presence (lane 4)
+        items.append(commit(41, "Start presence", "User presence tracking", .inProgress, parents: [38]))
+
+        // Merge UI to main
+        items.append(commit(42, "Merge: UI Components", "Integrate UI library", .completed, parents: [36, 39]))
+
+        // Continue testing
+        items.append(commit(43, "Add performance tests", "Benchmark critical paths", .completed, parents: [40]))
+
+        // Continue presence
+        items.append(commit(44, "Add status broadcast", "Share user status", .completed, parents: [41]))
+
+        // Merge WebSocket to main
+        items.append(commit(45, "Merge: WebSocket", "Integrate real-time features", .completed, parents: [42, 38]))
+
+        // Merge testing to main
+        items.append(commit(46, "Merge: Testing", "Add comprehensive test suite", .completed, parents: [45, 43]))
+
+        // Continue presence (still on branch)
+        items.append(commit(47, "Add typing indicators", "Show when users are typing", .inProgress, parents: [44]))
+
+        // Final main commits
+        items.append(commit(48, "Prepare release", "Version bump and changelog", .review, parents: [46]))
+
+        // Merge presence to main
+        items.append(commit(49, "Merge: Presence system", "Add user presence features", .completed, parents: [48, 47]))
+
+        return items
+    }
+
+    let items = createComplexHistory()
+
+    return NavigationStack {
+        Timeline(items: items)
+            .timelineStyle(.github)
+            .navigationTitle("Complex Git History (50 items)")
     }
 }
