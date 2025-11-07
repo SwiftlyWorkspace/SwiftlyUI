@@ -309,9 +309,24 @@ public struct DefaultTimelineItemContent<Item: TimelineItemRepresentable>: View 
 #Preview("Timeline Styles") {
     struct PreviewWrapper: View {
         let items: [TimelineItem] = [
-            TimelineItem(date: Date().addingTimeInterval(-7200), title: "Completed", status: .completed),
-            TimelineItem(date: Date().addingTimeInterval(-3600), title: "In Progress", status: .inProgress),
-            TimelineItem(date: Date(), title: "Pending", status: .pending)
+            TimelineItem(
+                date: Date().addingTimeInterval(-7200),
+                title: "Project Milestone Reached",
+                description: "Successfully delivered all requirements and met acceptance criteria",
+                status: .completed
+            ),
+            TimelineItem(
+                date: Date().addingTimeInterval(-3600),
+                title: "Development Sprint",
+                description: "Currently implementing core features and functionality",
+                status: .inProgress
+            ),
+            TimelineItem(
+                date: Date(),
+                title: "Code Review Scheduled",
+                description: "Awaiting peer review and approval before merge",
+                status: .review
+            )
         ]
 
         var body: some View {
