@@ -181,40 +181,46 @@ public struct HorizontalTimelineStyle: TimelineStyle {
     public init() {}
 
     public func makeBody(configuration: Configuration) -> some View {
-        ScrollView(.horizontal, showsIndicators: true) {
+        let items = configuration.items
+
+        return ScrollView(.horizontal, showsIndicators: true) {
             HStack(alignment: .top, spacing: 0) {
-                ForEach(configuration.items, id: \.id) { item in
-                    VStack(spacing: 12) {
-                        // Indicator
-                        TimelineIndicatorView(
-                            status: item.status,
-                            isSelected: configuration.selection.contains(item.id)
-                        )
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    HStack(spacing: 0) {
+                        // Item content
+                        VStack(spacing: 12) {
+                            // Indicator
+                            TimelineIndicatorView(
+                                status: item.status,
+                                isSelected: configuration.selection.contains(item.id)
+                            )
 
-                        // Connector
-                        if item.id != configuration.items.last?.id {
-                            TimelineConnectorView(isVertical: false, length: 40)
-                        }
+                            // Content below indicator
+                            VStack(alignment: .center, spacing: 4) {
+                                if let title = item.title {
+                                    Text(title)
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                        .multilineTextAlignment(.center)
+                                        .lineLimit(2)
+                                }
 
-                        // Content
-                        VStack(alignment: .leading, spacing: 4) {
-                            if let title = item.title {
-                                Text(title)
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                    .multilineTextAlignment(.center)
-                                    .lineLimit(2)
+                                Text(item.date, style: .relative)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
                             }
-
-                            Text(item.date, style: .relative)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                            .frame(width: 100)
+                            .padding(.horizontal, 8)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                configuration.onItemTap?(item)
+                            }
                         }
-                        .frame(width: 100)
-                        .padding(.horizontal, 8)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            configuration.onItemTap?(item)
+
+                        // Horizontal connector between items
+                        if index < items.count - 1 {
+                            TimelineConnectorView(isVertical: false, length: 40)
+                                .padding(.top, 8) // Align with indicator center
                         }
                     }
                 }
