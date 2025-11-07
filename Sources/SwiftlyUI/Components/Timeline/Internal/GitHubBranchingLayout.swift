@@ -49,42 +49,19 @@ struct GitHubBranchingContainer<Content: View>: View {
 
     // MARK: - Private Views
 
-    /// Debug helper to print lane assignments and line drawing decisions
+    /// Debug helper to print lane assignments
     private func debugPrintLayout(_ layout: BranchLayout) {
+        #if DEBUG
         print("\n=== BRANCH LAYOUT DEBUG ===")
         print("Total lanes: \(layout.laneCount)")
         for (index, item) in items.enumerated() {
             let lane = layout.itemLanes[item.id] ?? -1
             let parents = layout.parentMap[item.id] ?? []
             let reachTo = reachIndex(for: index, itemId: item.id, lane: lane, layout: layout)
-            print("\n[\(index)] Lane \(lane): '\(item.title ?? "No title")'")
-            print("  Reaches to index: \(reachTo)")
-            print("  Parents: \(parents.count)")
-
-            // Debug which lanes are active at this row
-            for checkLane in 0..<layout.laneCount {
-                let isActive = isLaneActiveAt(index: index, lane: checkLane, layout: layout)
-                if isActive {
-                    print("  Lane \(checkLane) active: \(isActive)")
-
-                    if checkLane != lane {
-                        // Check if we would draw pass-through
-                        let laneEndsAtMerge = layout.parentMap[item.id]?.contains { parentId in
-                            guard layout.itemLanes[parentId] == checkLane else { return false }
-                            let parentContinues = items.enumerated().contains { nextIndex, nextItem in
-                                nextIndex > index &&
-                                layout.itemLanes[nextItem.id] == checkLane &&
-                                (layout.parentMap[nextItem.id]?.contains(parentId) ?? false)
-                            }
-                            return !parentContinues
-                        } ?? false
-
-                        print("    Will draw pass-through: \(!laneEndsAtMerge) (laneEndsAtMerge: \(laneEndsAtMerge))")
-                    }
-                }
-            }
+            print("[\(index)] Lane \(lane): '\(item.title ?? "No title")' reaches to index \(reachTo) - Parents: \(parents.count)")
         }
-        print("\n=========================\n")
+        print("=========================\n")
+        #endif
     }
 
     /// Check if a lane is active at a specific row (should have a line drawn)
@@ -171,8 +148,6 @@ struct GitHubBranchingContainer<Content: View>: View {
                                        let parentLane = layout.itemLanes[parentId] {
                                         let parentX = CGFloat(parentLane) * laneWidth + laneWidth / 2
 
-                                        let _ = print("[\(index)] Drawing connector from parent lane \(parentLane) to item lane \(itemLane) for '\(item.title ?? "")'")
-
                                         connectorPath(
                                             from: CGPoint(x: parentX, y: 0),
                                             to: CGPoint(x: laneX, y: centerY),
@@ -183,9 +158,7 @@ struct GitHubBranchingContainer<Content: View>: View {
                             }
 
                             // Draw line from item to bottom (if lane continues to next row)
-                            let continuesBelow = index < items.count - 1 && isLaneActiveAt(index: index + 1, lane: lane, layout: layout)
-                            let _ = print("[\(index)] Item lane \(lane) continues below: \(continuesBelow)")
-                            if continuesBelow {
+                            if index < items.count - 1 && isLaneActiveAt(index: index + 1, lane: lane, layout: layout) {
                                 Path { path in
                                     path.move(to: CGPoint(x: laneX, y: centerY))
                                     path.addLine(to: CGPoint(x: laneX, y: itemSpacing))
@@ -205,12 +178,8 @@ struct GitHubBranchingContainer<Content: View>: View {
                             layout.itemLanes[parentId] == lane
                         } ?? false && !continuesBelow
 
-                        let _ = print("[\(index)] Pass-through lane \(lane): isMergingAndEnding=\(isMergingAndEnding), continuesBelow=\(continuesBelow)")
-
                         // Don't draw pass-through if merging and ending here (merge connector handles it)
                         if !isMergingAndEnding {
-                            let _ = print("[\(index)] Drawing pass-through on lane \(lane)")
-
                             Path { path in
                                 path.move(to: CGPoint(x: laneX, y: 0))
                                 if continuesBelow {
@@ -222,8 +191,6 @@ struct GitHubBranchingContainer<Content: View>: View {
                                 }
                             }
                             .stroke(connectorColor, lineWidth: connectorWidth)
-                        } else {
-                            let _ = print("[\(index)] Skipping pass-through on lane \(lane) because it's merging and ending here")
                         }
                     }
                 }
