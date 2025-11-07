@@ -283,15 +283,37 @@ public struct CompactTimelineStyle: TimelineStyle {
 /// A timeline style inspired by GitHub's activity feed.
 ///
 /// Features a clean, card-based design with compact indicators.
+/// Automatically detects and visualizes branch relationships when parent IDs are present.
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 public struct GitHubTimelineStyle: TimelineStyle {
     public init() {}
 
     public func makeBody(configuration: Configuration) -> some View {
         let items = configuration.items
+
+        // Detect if any items have parent relationships for branching
+        let hasBranches = items.contains { item in
+            item.parentIds != nil && !item.parentIds!.isEmpty
+        }
+
+        if hasBranches {
+            // Use branching layout
+            branchingLayout(configuration: configuration)
+        } else {
+            // Use simple linear layout (backward compatible)
+            linearLayout(configuration: configuration)
+        }
+    }
+
+    // MARK: - Private Views
+
+    /// Linear layout for timelines without branches (original behavior).
+    @ViewBuilder
+    private func linearLayout(configuration: Configuration) -> some View {
+        let items = configuration.items
         let lastItemId = items.last?.id
 
-        return ScrollView {
+        ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(items, id: \.id) { timelineItem in
                     GitHubTimelineRow(
@@ -303,6 +325,74 @@ public struct GitHubTimelineStyle: TimelineStyle {
                 }
             }
             .padding()
+        }
+    }
+
+    /// Branching layout for timelines with parent relationships.
+    @ViewBuilder
+    private func branchingLayout(configuration: Configuration) -> some View {
+        GitHubBranchingContainer(
+            items: configuration.items,
+            selection: configuration.selection,
+            laneWidth: 200,
+            itemSpacing: 100
+        ) { item in
+            GitHubBranchCard(
+                item: item,
+                isSelected: configuration.selection.contains(item.id),
+                onTap: configuration.onItemTap
+            )
+        }
+    }
+}
+
+// MARK: - GitHub Branch Card
+
+/// Card view for items in branching layout.
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+private struct GitHubBranchCard: View {
+    let item: AnyTimelineItemWrapper
+    let isSelected: Bool
+    let onTap: ((AnyTimelineItemWrapper) -> Void)?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // Title and date
+            VStack(alignment: .leading, spacing: 4) {
+                if let title = item.title {
+                    Text(title)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .lineLimit(2)
+                }
+
+                Text(item.date, style: .relative)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            // Status badge
+            if let status = item.status {
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(status.color)
+                        .frame(width: 6, height: 6)
+                    Text(status.displayName)
+                        .font(.caption2)
+                }
+                .foregroundStyle(status.color)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(isSelected ? Color.blue.opacity(0.1) : Color.textBackground)
+                .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap?(item)
         }
     }
 }
