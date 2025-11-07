@@ -354,98 +354,75 @@ public struct DefaultTimelineItemContent<Item: TimelineItemRepresentable>: View 
 }
 
 #Preview("GitHub Branching Timeline") {
-    struct PreviewWrapper: View {
-        // Create a branching timeline simulating a Git workflow
-        let commit1 = TimelineItem(
-            id: UUID(),
+    // Create items with fixed IDs so parent references work correctly
+    let commit1Id = UUID()
+    let commit2Id = UUID()
+    let featureBranch1Id = UUID()
+    let commit3Id = UUID()
+    let featureBranch2Id = UUID()
+    let merge1Id = UUID()
+
+    let items = [
+        TimelineItem(
+            id: commit1Id,
             date: Date().addingTimeInterval(-10000),
             title: "Initial commit",
             description: "Set up project structure",
             status: .completed
+        ),
+        TimelineItem(
+            id: commit2Id,
+            date: Date().addingTimeInterval(-8000),
+            title: "Add authentication",
+            description: "Implement user login and registration",
+            status: .completed,
+            parentIds: [commit1Id]
+        ),
+        TimelineItem(
+            id: featureBranch1Id,
+            date: Date().addingTimeInterval(-7000),
+            title: "Feature: Dark mode",
+            description: "Start implementing dark mode support",
+            status: .inProgress,
+            parentIds: [commit1Id]
+        ),
+        TimelineItem(
+            id: commit3Id,
+            date: Date().addingTimeInterval(-6000),
+            title: "Fix auth bug",
+            description: "Resolve token expiration issue",
+            status: .completed,
+            parentIds: [commit2Id]
+        ),
+        TimelineItem(
+            id: featureBranch2Id,
+            date: Date().addingTimeInterval(-5000),
+            title: "Complete dark mode",
+            description: "Finish dark mode implementation",
+            status: .completed,
+            parentIds: [featureBranch1Id]
+        ),
+        TimelineItem(
+            id: merge1Id,
+            date: Date().addingTimeInterval(-3000),
+            title: "Merge: Dark mode",
+            description: "Merge dark mode feature into main",
+            status: .completed,
+            parentIds: [commit3Id, featureBranch2Id]
+        ),
+        TimelineItem(
+            id: UUID(),
+            date: Date().addingTimeInterval(-1000),
+            title: "Update dependencies",
+            description: "Bump package versions",
+            status: .review,
+            parentIds: [merge1Id]
         )
+    ]
 
-        var commit2: TimelineItem {
-            TimelineItem(
-                id: UUID(),
-                date: Date().addingTimeInterval(-8000),
-                title: "Add authentication",
-                description: "Implement user login and registration",
-                status: .completed,
-                parentIds: [commit1.id]
-            )
-        }
-
-        var featureBranch1: TimelineItem {
-            TimelineItem(
-                id: UUID(),
-                date: Date().addingTimeInterval(-7000),
-                title: "Feature: Dark mode",
-                description: "Start implementing dark mode support",
-                status: .inProgress,
-                parentIds: [commit1.id]
-            )
-        }
-
-        var commit3: TimelineItem {
-            TimelineItem(
-                id: UUID(),
-                date: Date().addingTimeInterval(-6000),
-                title: "Fix auth bug",
-                description: "Resolve token expiration issue",
-                status: .completed,
-                parentIds: [commit2.id]
-            )
-        }
-
-        var featureBranch2: TimelineItem {
-            TimelineItem(
-                id: UUID(),
-                date: Date().addingTimeInterval(-5000),
-                title: "Complete dark mode",
-                description: "Finish dark mode implementation",
-                status: .completed,
-                parentIds: [featureBranch1.id]
-            )
-        }
-
-        var merge1: TimelineItem {
-            TimelineItem(
-                id: UUID(),
-                date: Date().addingTimeInterval(-3000),
-                title: "Merge: Dark mode",
-                description: "Merge dark mode feature into main",
-                status: .completed,
-                parentIds: [commit3.id, featureBranch2.id]
-            )
-        }
-
-        var commit4: TimelineItem {
-            TimelineItem(
-                id: UUID(),
-                date: Date().addingTimeInterval(-1000),
-                title: "Update dependencies",
-                description: "Bump package versions",
-                status: .review,
-                parentIds: [merge1.id]
-            )
-        }
-
-        var body: some View {
-            NavigationStack {
-                Timeline(items: [
-                    commit1,
-                    commit2,
-                    featureBranch1,
-                    commit3,
-                    featureBranch2,
-                    merge1,
-                    commit4
-                ])
-                .timelineStyle(.github)
-                .navigationTitle("Git History")
-            }
-        }
+    return NavigationStack {
+        Timeline(items: items)
+            .timelineStyle(.github)
+            .navigationTitle("Git History")
     }
-
-    return PreviewWrapper()
 }
