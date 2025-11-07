@@ -53,18 +53,17 @@ struct TimelineItemView: View {
 
             // Content
             VStack(alignment: .leading, spacing: 0) {
-                contentView
-                    .padding(padding)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(isSelected ? Color.blue.opacity(0.1) : Color.clear)
-                    )
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        if let onTap = onTap {
-                            onTap(item)
-                        }
+                GroupBox {
+                    contentView
+                        .padding(padding)
+                }
+                .backgroundStyle(isSelected ? Color.blue.opacity(0.1) : Color.clear)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if let onTap = onTap {
+                        onTap(item)
                     }
+                }
 
                 // Spacing after item
                 if !isLast {

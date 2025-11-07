@@ -111,7 +111,7 @@ struct TimelineIndicatorShapeKey: EnvironmentKey {
 
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 struct TimelineIndicatorSizeKey: EnvironmentKey {
-    static let defaultValue: CGFloat = 12
+    static let defaultValue: CGFloat = 16
 }
 
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
