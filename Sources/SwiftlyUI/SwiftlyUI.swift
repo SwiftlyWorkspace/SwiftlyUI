@@ -97,11 +97,51 @@
 /// **Available Styles**: `.inline`, `.navigationLink`, `.sheet`, `.menu`
 /// **Features**: Selection limits, bulk actions, search, sections, customizable display
 ///
+/// ### Timeline
+/// A chronological timeline component for displaying events with customizable styles and indicators.
+///
+/// ```swift
+/// @State private var events: [TimelineItem] = [
+///     TimelineItem(date: date1, title: "Task Started", status: .inProgress),
+///     TimelineItem(date: date2, title: "Task Completed", status: .completed)
+/// ]
+///
+/// Timeline(items: events)
+///     .timelineStyle(.vertical)
+/// ```
+///
+/// **Available Styles**: `.vertical`, `.horizontal`, `.compact`, `.github`
+/// **Features**:
+/// - Automatic date sorting
+/// - Customizable indicators (shape, size, color, icons)
+/// - Customizable connectors (solid, dashed, dotted)
+/// - Expand/collapse long descriptions
+/// - Selection support
+/// - Status-based coloring (pending, inProgress, completed, cancelled, blocked, review)
+///
+/// **Customization Examples**:
+/// ```swift
+/// Timeline(items: events)
+///     .timelineIndicator(shape: .roundedSquare(), size: 16, color: .blue)
+///     .timelineConnector(width: 3, style: .dashed)
+///     .timelineLayout(spacing: 20, indicatorPosition: .trailing)
+/// ```
+///
+/// Works with any type conforming to `TimelineItemRepresentable`:
+/// ```swift
+/// extension MyEvent: TimelineItemRepresentable {
+///     var timelineDate: Date { eventDate }
+///     var timelineTitle: String? { eventName }
+///     var timelineDescription: String? { eventDetails }
+///     var timelineStatus: TimelineStatus? { status }
+/// }
+/// ```
+///
 /// ### Layout Components
 /// - `FlowLayout`: A layout that arranges subviews in rows, wrapping to new lines as needed
 ///
 /// ## Requirements
-/// - iOS 16.0+ / macOS 13.0+ / tvOS 16.0+ / watchOS 9.0+ (MultiPicker components)
+/// - iOS 16.0+ / macOS 13.0+ / tvOS 16.0+ / watchOS 9.0+ (MultiPicker, Timeline components)
 /// - iOS 15.0+ / macOS 12.0+ / tvOS 15.0+ / watchOS 8.0+ (Other components)
 /// - Swift 5.7+
 import SwiftUI
