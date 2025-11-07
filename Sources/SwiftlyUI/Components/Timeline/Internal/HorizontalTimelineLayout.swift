@@ -19,14 +19,15 @@ struct HorizontalTimelineLayout: Layout {
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         guard !subviews.isEmpty else { return .zero }
 
-        // Calculate total width needed
-        let itemCount = subviews.count / 2 // Half are indicators, half are content
-        let totalWidth = CGFloat(itemCount - 1) * itemSpacing + indicatorSize * 2
+        // First subview is connector line, rest are divided between indicators and content
+        let itemCount = (subviews.count - 1) / 2
+        let totalWidth = CGFloat(max(0, itemCount - 1)) * itemSpacing + indicatorSize * 2
 
         // Calculate height (indicator + spacing + max content height)
-        let contentSubviews = Array(subviews.dropFirst(itemCount))
+        let contentStartIndex = 1 + itemCount
+        let contentSubviews = Array(subviews.dropFirst(contentStartIndex))
         let maxContentHeight = contentSubviews.map { $0.sizeThatFits(proposal).height }.max() ?? 0
-        let totalHeight = indicatorSize + 20 + maxContentHeight // 20pt spacing between indicator and content
+        let totalHeight = indicatorSize + 20 + maxContentHeight
 
         return CGSize(width: totalWidth, height: totalHeight)
     }
@@ -34,9 +35,26 @@ struct HorizontalTimelineLayout: Layout {
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         guard !subviews.isEmpty else { return }
 
-        let itemCount = subviews.count / 2
-        let indicators = Array(subviews.prefix(itemCount))
-        let content = Array(subviews.dropFirst(itemCount))
+        let itemCount = (subviews.count - 1) / 2
+
+        // First subview is the connector line
+        let connectorLine = subviews[0]
+        let indicators = Array(subviews[1...(itemCount)])
+        let content = Array(subviews.dropFirst(itemCount + 1))
+
+        // Place connector line through all indicator positions
+        if itemCount > 1 {
+            let firstX = bounds.minX + indicatorSize / 2
+            let lastX = bounds.minX + CGFloat(itemCount - 1) * itemSpacing + indicatorSize / 2
+            let lineLength = lastX - firstX
+            let lineY = bounds.minY + indicatorSize / 2
+
+            connectorLine.place(
+                at: CGPoint(x: firstX, y: lineY),
+                anchor: .leading,
+                proposal: ProposedViewSize(width: lineLength, height: 2)
+            )
+        }
 
         // Place indicators in a row at the top
         for (index, indicator) in indicators.enumerated() {
@@ -54,7 +72,7 @@ struct HorizontalTimelineLayout: Layout {
         for (index, contentView) in content.enumerated() {
             let contentSize = contentView.sizeThatFits(proposal)
             let x = bounds.minX + CGFloat(index) * itemSpacing + indicatorSize / 2
-            let y = bounds.minY + indicatorSize + 20 // 20pt spacing
+            let y = bounds.minY + indicatorSize + 20
 
             contentView.place(
                 at: CGPoint(x: x, y: y),
@@ -79,42 +97,28 @@ struct HorizontalTimelineContainer<Content: View>: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: true) {
-            ZStack(alignment: .topLeading) {
-                // Background connector line
-                if items.count > 1 {
-                    connectorLine
+            HorizontalTimelineLayout(itemSpacing: itemSpacing, indicatorSize: indicatorSize) {
+                // Connector line as first subview
+                Rectangle()
+                    .fill(connectorColor)
+                    .frame(height: connectorWidth)
+
+                // Indicators
+                ForEach(items, id: \.id) { item in
+                    TimelineIndicatorView(
+                        status: item.status,
+                        isSelected: selection.contains(item.id)
+                    )
                 }
 
-                // Layout with indicators and content
-                HorizontalTimelineLayout(itemSpacing: itemSpacing, indicatorSize: indicatorSize) {
-                    // First pass: indicators
-                    ForEach(items, id: \.id) { item in
-                        TimelineIndicatorView(
-                            status: item.status,
-                            isSelected: selection.contains(item.id)
-                        )
-                    }
-
-                    // Second pass: content
-                    ForEach(items, id: \.id) { item in
-                        content(item)
-                            .frame(width: 116)
-                    }
+                // Content
+                ForEach(items, id: \.id) { item in
+                    content(item)
+                        .frame(width: 116)
                 }
             }
             .padding(.vertical, 20)
             .padding(.horizontal, 40)
         }
-    }
-
-    private var connectorLine: some View {
-        let lineY = 20 + indicatorSize / 2 // Vertical center of indicators
-        let lineStart = 40 + indicatorSize / 2 // Start from center of first indicator
-        let lineLength = CGFloat(items.count - 1) * itemSpacing
-
-        return Rectangle()
-            .fill(connectorColor)
-            .frame(width: lineLength, height: connectorWidth)
-            .position(x: lineStart + lineLength / 2, y: lineY)
     }
 }
