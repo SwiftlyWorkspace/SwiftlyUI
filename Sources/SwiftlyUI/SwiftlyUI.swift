@@ -137,6 +137,36 @@
 /// }
 /// ```
 ///
+/// **Branching Support** (GitHub Style):
+/// Timeline automatically detects and visualizes branch relationships when parent IDs are provided:
+/// ```swift
+/// // Create commits with parent relationships
+/// let commit1 = TimelineItem(date: date1, title: "Initial commit")
+/// let commit2 = TimelineItem(date: date2, title: "Main work", parentIds: [commit1.id])
+/// let feature = TimelineItem(date: date3, title: "Feature work", parentIds: [commit1.id])
+/// let merge = TimelineItem(date: date4, title: "Merge feature", parentIds: [commit2.id, feature.id])
+///
+/// // GitHub style automatically shows branches and merges
+/// Timeline(items: [commit1, commit2, feature, merge])
+///     .timelineStyle(.github)
+/// ```
+///
+/// **Branch Customization**:
+/// ```swift
+/// Timeline(items: commits)
+///     .timelineStyle(.github)
+///     .timelineBranchLaneWidth(250)        // Adjust lane spacing
+///     .timelineBranchConnectorCurve(30)     // Smoother curves
+///     .timelineBranchIndicators(true)       // Show branch/merge dots
+/// ```
+///
+/// **Convenience Methods**:
+/// ```swift
+/// let parent = TimelineItem(date: date1, title: "Parent")
+/// let child = TimelineItem(date: date2, title: "Child").withParent(parent.id)
+/// let merge = TimelineItem(date: date3, title: "Merge").withParents([parent.id, child.id])
+/// ```
+///
 /// ### Layout Components
 /// - `FlowLayout`: A layout that arranges subviews in rows, wrapping to new lines as needed
 ///
