@@ -25,14 +25,14 @@ SwiftlyUI provides a comprehensive set of customizable components that integrate
 Add SwiftlyUI to your project using Xcode:
 
 1. File → Add Package Dependencies
-2. Enter the repository URL: `https://github.com/yourusername/SwiftlyUI.git`
+2. Enter the repository URL: `https://github.com/SwiftlyWorkspace/SwiftlyUI.git`
 3. Click Add Package
 
 Or add it to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/yourusername/SwiftlyUI.git", from: "1.0.0")
+    .package(url: "https://github.com/SwiftlyWorkspace/SwiftlyUI.git", from: "1.0.0")
 ]
 ```
 
@@ -189,7 +189,7 @@ MultiPicker("Options", selection: $selection) {
 Check out the included demo app to see all components in action:
 
 ```bash
-git clone https://github.com/yourusername/SwiftlyUI.git
+git clone https://github.com/SwiftlyWorkspace/SwiftlyUI-DemoApp.git
 cd SwiftlyUI-DemoApp
 open SwiftlyUI-DemoApp.xcodeproj
 ```

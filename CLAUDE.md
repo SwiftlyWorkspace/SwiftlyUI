@@ -41,11 +41,12 @@ swift build
   - `UserRepresentable.swift` - Protocol for custom user types with computed displayName, initials, and avatarColor
   - `UserChip.swift` - Individual user chip with avatar (Image/URL/initials fallback) and remove button
 - **`Components/MultiPicker/`** - Multi-selection picker system (iOS 16.0+ / macOS 13.0+)
-  - `MultiPicker.swift` - Base multi-selection picker component with tuple-based API
-  - `SearchableMultiPicker.swift` - Multi-picker with built-in search/filter functionality
-  - `GroupedMultiPicker.swift` - Multi-picker with section/category support
+  - `MultiPicker.swift` - Base multi-selection picker component with ViewBuilder API
+  - `SearchableMultiPicker.swift` - Multi-picker with built-in search/filter functionality (ViewBuilder API)
+  - `GroupedMultiPicker.swift` - Multi-picker with section/category support (tuple-based sections API)
   - `MultiPickerStyle.swift` - Style protocol and built-in styles (inline, navigationLink, sheet, menu)
-  - `Internal/` - Internal supporting views (checkbox, row, NSMenuPresenter for macOS native menus)
+  - `MultiPickerSelectionDisplay.swift` - Handles display of selected items in collapsed state
+  - `Internal/` - Internal supporting views (checkbox, row)
 - **`Components/Layout/`** - Layout components
   - `FlowLayout.swift` - Flexible flow layout container that wraps views into rows
   - `AdaptiveTokenLayout.swift` - Token/chip layout with overflow indicator (used in MultiPicker labels)
