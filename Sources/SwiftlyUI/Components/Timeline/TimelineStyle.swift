@@ -156,7 +156,7 @@ public struct VerticalTimelineStyle: TimelineStyle {
     public func makeBody(configuration: Configuration) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(configuration.items) { item in
+                ForEach(configuration.items, id: \.id) { item in
                     TimelineItemView(
                         item: item,
                         isLast: item.id == configuration.items.last?.id,
@@ -183,7 +183,7 @@ public struct HorizontalTimelineStyle: TimelineStyle {
     public func makeBody(configuration: Configuration) -> some View {
         ScrollView(.horizontal, showsIndicators: true) {
             HStack(alignment: .top, spacing: 0) {
-                ForEach(configuration.items) { item in
+                ForEach(configuration.items, id: \.id) { item in
                     VStack(spacing: 12) {
                         // Indicator
                         TimelineIndicatorView(
@@ -236,7 +236,7 @@ public struct CompactTimelineStyle: TimelineStyle {
     public func makeBody(configuration: Configuration) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 4) {
-                ForEach(configuration.items) { item in
+                ForEach(configuration.items, id: \.id) { item in
                     HStack(spacing: 10) {
                         // Compact indicator
                         TimelineIndicatorView(
@@ -304,7 +304,7 @@ public struct GitHubTimelineStyle: TimelineStyle {
     public func makeBody(configuration: Configuration) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(configuration.items) { item in
+                ForEach(configuration.items, id: \.id) { item in
                     HStack(alignment: .top, spacing: 12) {
                         // Indicator column with connector
                         VStack(spacing: 0) {
