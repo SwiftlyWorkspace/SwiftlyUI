@@ -97,11 +97,81 @@
 /// **Available Styles**: `.inline`, `.navigationLink`, `.sheet`, `.menu`
 /// **Features**: Selection limits, bulk actions, search, sections, customizable display
 ///
+/// ### Timeline
+/// A chronological timeline component for displaying events with customizable styles and indicators.
+///
+/// ```swift
+/// @State private var events: [TimelineItem] = [
+///     TimelineItem(date: date1, title: "Task Started", status: .inProgress),
+///     TimelineItem(date: date2, title: "Task Completed", status: .completed)
+/// ]
+///
+/// Timeline(items: events)
+///     .timelineStyle(.vertical)
+/// ```
+///
+/// **Available Styles**: `.vertical`, `.horizontal`, `.compact`, `.github`
+/// **Features**:
+/// - Automatic date sorting
+/// - Customizable indicators (shape, size, color, icons)
+/// - Customizable connectors (solid, dashed, dotted)
+/// - Expand/collapse long descriptions
+/// - Selection support
+/// - Status-based coloring (pending, inProgress, completed, cancelled, blocked, review)
+///
+/// **Customization Examples**:
+/// ```swift
+/// Timeline(items: events)
+///     .timelineIndicator(shape: .roundedSquare(), size: 16, color: .blue)
+///     .timelineConnector(width: 3, style: .dashed)
+///     .timelineLayout(spacing: 20, indicatorPosition: .trailing)
+/// ```
+///
+/// Works with any type conforming to `TimelineItemRepresentable`:
+/// ```swift
+/// extension MyEvent: TimelineItemRepresentable {
+///     var timelineDate: Date { eventDate }
+///     var timelineTitle: String? { eventName }
+///     var timelineDescription: String? { eventDetails }
+///     var timelineStatus: TimelineStatus? { status }
+/// }
+/// ```
+///
+/// **Branching Support** (GitHub Style):
+/// Timeline automatically detects and visualizes branch relationships when parent IDs are provided:
+/// ```swift
+/// // Create commits with parent relationships
+/// let commit1 = TimelineItem(date: date1, title: "Initial commit")
+/// let commit2 = TimelineItem(date: date2, title: "Main work", parentIds: [commit1.id])
+/// let feature = TimelineItem(date: date3, title: "Feature work", parentIds: [commit1.id])
+/// let merge = TimelineItem(date: date4, title: "Merge feature", parentIds: [commit2.id, feature.id])
+///
+/// // GitHub style automatically shows branches and merges
+/// Timeline(items: [commit1, commit2, feature, merge])
+///     .timelineStyle(.github)
+/// ```
+///
+/// **Branch Customization**:
+/// ```swift
+/// Timeline(items: commits)
+///     .timelineStyle(.github)
+///     .timelineBranchLaneWidth(250)        // Adjust lane spacing
+///     .timelineBranchConnectorCurve(30)     // Smoother curves
+///     .timelineBranchIndicators(true)       // Show branch/merge dots
+/// ```
+///
+/// **Convenience Methods**:
+/// ```swift
+/// let parent = TimelineItem(date: date1, title: "Parent")
+/// let child = TimelineItem(date: date2, title: "Child").withParent(parent.id)
+/// let merge = TimelineItem(date: date3, title: "Merge").withParents([parent.id, child.id])
+/// ```
+///
 /// ### Layout Components
 /// - `FlowLayout`: A layout that arranges subviews in rows, wrapping to new lines as needed
 ///
 /// ## Requirements
-/// - iOS 16.0+ / macOS 13.0+ / tvOS 16.0+ / watchOS 9.0+ (MultiPicker components)
+/// - iOS 16.0+ / macOS 13.0+ / tvOS 16.0+ / watchOS 9.0+ (MultiPicker, Timeline components)
 /// - iOS 15.0+ / macOS 12.0+ / tvOS 15.0+ / watchOS 8.0+ (Other components)
 /// - Swift 5.7+
 import SwiftUI
