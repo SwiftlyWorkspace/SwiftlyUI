@@ -58,15 +58,11 @@
 /// ```swift
 /// @State private var selection: Set<Int> = []
 ///
-/// MultiPicker(
-///     title: "Choose Options",
-///     items: [
-///         (value: 1, label: "Option 1"),
-///         (value: 2, label: "Option 2"),
-///         (value: 3, label: "Option 3")
-///     ],
-///     selection: $selection
-/// )
+/// MultiPicker("Choose Options", selection: $selection) {
+///     Text("Option 1").multiPickerTag(1)
+///     Text("Option 2").multiPickerTag(2)
+///     Text("Option 3").multiPickerTag(3)
+/// }
 /// .multiPickerStyle(.inline)
 /// ```
 ///
@@ -76,12 +72,11 @@
 /// @State private var selection: Set<String> = []
 /// @State private var searchText = ""
 ///
-/// SearchableMultiPicker(
-///     title: "Select Countries",
-///     items: countries.map { (value: $0.id, label: $0.name) },
-///     selection: $selection,
-///     searchText: $searchText
-/// )
+/// SearchableMultiPicker("Select Countries", selection: $selection, searchText: $searchText) {
+///     ForEach(countries) { country in
+///         Text(country.name).multiPickerTag(country.id)
+///     }
+/// }
 /// ```
 ///
 /// #### GroupedMultiPicker (Sectioned)
