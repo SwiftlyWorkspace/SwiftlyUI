@@ -71,12 +71,12 @@ final class TimelineTests: XCTestCase {
     }
 
     func testTimelineStatusIcons() {
-        XCTAssertEqual(TimelineStatus.pending.defaultIcon, "clock")
-        XCTAssertEqual(TimelineStatus.inProgress.defaultIcon, "arrow.clockwise")
-        XCTAssertEqual(TimelineStatus.completed.defaultIcon, "checkmark")
-        XCTAssertEqual(TimelineStatus.cancelled.defaultIcon, "xmark")
-        XCTAssertEqual(TimelineStatus.blocked.defaultIcon, "exclamationmark.triangle")
-        XCTAssertEqual(TimelineStatus.review.defaultIcon, "eye")
+        XCTAssertEqual(TimelineStatus.pending.icon, "clock")
+        XCTAssertEqual(TimelineStatus.inProgress.icon, "arrow.clockwise")
+        XCTAssertEqual(TimelineStatus.completed.icon, "checkmark")
+        XCTAssertEqual(TimelineStatus.cancelled.icon, "xmark")
+        XCTAssertEqual(TimelineStatus.blocked.icon, "exclamationmark.triangle")
+        XCTAssertEqual(TimelineStatus.review.icon, "eye")
     }
 
     func testTimelineStatusStates() {
@@ -90,6 +90,70 @@ final class TimelineTests: XCTestCase {
         XCTAssertTrue(TimelineStatus.blocked.isBlocked)
         XCTAssertTrue(TimelineStatus.cancelled.isBlocked)
         XCTAssertFalse(TimelineStatus.pending.isBlocked)
+    }
+
+    func testCustomTimelineStatusCreation() {
+        let customStatus = TimelineStatus(
+            id: "archived",
+            displayName: "Archived",
+            color: .gray,
+            icon: "archivebox"
+        )
+
+        XCTAssertEqual(customStatus.id, "archived")
+        XCTAssertEqual(customStatus.displayName, "Archived")
+        XCTAssertEqual(customStatus.color, .gray)
+        XCTAssertEqual(customStatus.icon, "archivebox")
+    }
+
+    func testTimelineStatusEquality() {
+        let status1 = TimelineStatus.completed
+        let status2 = TimelineStatus.completed
+        let status3 = TimelineStatus.pending
+
+        XCTAssertEqual(status1, status2)
+        XCTAssertNotEqual(status1, status3)
+
+        // Test custom status equality
+        let custom1 = TimelineStatus(id: "test", displayName: "Test", color: .blue, icon: "star")
+        let custom2 = TimelineStatus(id: "test", displayName: "Test", color: .blue, icon: "star")
+        let custom3 = TimelineStatus(id: "other", displayName: "Other", color: .red, icon: "circle")
+
+        XCTAssertEqual(custom1, custom2)
+        XCTAssertNotEqual(custom1, custom3)
+    }
+
+    func testTimelineStatusHashing() {
+        var statusSet = Set<TimelineStatus>()
+
+        statusSet.insert(.pending)
+        statusSet.insert(.completed)
+        statusSet.insert(.pending) // Duplicate
+
+        XCTAssertEqual(statusSet.count, 2)
+        XCTAssertTrue(statusSet.contains(.pending))
+        XCTAssertTrue(statusSet.contains(.completed))
+        XCTAssertFalse(statusSet.contains(.blocked))
+    }
+
+    func testBuiltInStatusesArray() {
+        let builtIn = TimelineStatus.builtInStatuses
+
+        XCTAssertEqual(builtIn.count, 6)
+        XCTAssertTrue(builtIn.contains(.pending))
+        XCTAssertTrue(builtIn.contains(.inProgress))
+        XCTAssertTrue(builtIn.contains(.completed))
+        XCTAssertTrue(builtIn.contains(.cancelled))
+        XCTAssertTrue(builtIn.contains(.blocked))
+        XCTAssertTrue(builtIn.contains(.review))
+    }
+
+    func testTimelineStatusIdentifiable() {
+        XCTAssertEqual(TimelineStatus.pending.id, "pending")
+        XCTAssertEqual(TimelineStatus.completed.id, "completed")
+
+        let custom = TimelineStatus(id: "custom_status", displayName: "Custom", color: .blue, icon: "star")
+        XCTAssertEqual(custom.id, "custom_status")
     }
 
     // MARK: - Date Sorting Tests

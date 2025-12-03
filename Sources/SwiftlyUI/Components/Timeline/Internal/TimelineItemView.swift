@@ -154,7 +154,7 @@ struct TimelineItemView: View {
                 // Status badge
                 if let status = item.status {
                     HStack(spacing: 4) {
-                        Image(systemName: status.defaultIcon)
+                        Image(systemName: status.icon)
                             .font(.caption2)
                         Text(status.displayName)
                             .font(.caption)
