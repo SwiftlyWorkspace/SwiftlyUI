@@ -167,6 +167,37 @@
 /// let merge = TimelineItem(date: date3, title: "Merge").withParents([parent.id, child.id])
 /// ```
 ///
+/// **Custom Status Types**:
+/// Create custom statuses beyond the 6 built-in types:
+/// ```swift
+/// // Define custom statuses
+/// extension TimelineStatus {
+///     static let archived = TimelineStatus(
+///         id: "archived",
+///         displayName: "Archived",
+///         color: .gray,
+///         icon: "archivebox"
+///     )
+///
+///     static let escalated = TimelineStatus(
+///         id: "escalated",
+///         displayName: "Escalated",
+///         color: .red,
+///         icon: "exclamationmark.3"
+///     )
+/// }
+///
+/// // Use custom statuses
+/// let item = TimelineItem(date: Date(), title: "Old Task", status: .archived)
+///
+/// // Add custom categorization
+/// extension TimelineStatus {
+///     var requiresAttention: Bool {
+///         self == .escalated || self == .blocked
+///     }
+/// }
+/// ```
+///
 /// ### Layout Components
 /// - `FlowLayout`: A layout that arranges subviews in rows, wrapping to new lines as needed
 ///

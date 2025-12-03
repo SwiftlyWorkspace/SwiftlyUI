@@ -24,7 +24,7 @@ struct TimelineIndicatorView: View {
     }
 
     private var iconName: String? {
-        customIcon ?? status?.defaultIcon
+        customIcon ?? status?.icon
     }
 
     // MARK: - Body
